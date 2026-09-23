@@ -707,6 +707,40 @@
    SUPABASE
 ===================================================== */
 
+const APP_VERSION = "0.3.0";
+
+async function checkForProgramUpdate() {
+    try {
+        const response = await fetch(
+            "version.json?v=" + Date.now(),
+            {
+                cache: "no-store"
+            }
+        );
+
+        if (!response.ok) return;
+
+        const remote = await response.json();
+
+        if (
+            remote &&
+            remote.version &&
+            remote.version !== APP_VERSION
+        ) {
+            const url =
+                window.location.origin +
+                window.location.pathname +
+                "?v=" +
+                encodeURIComponent(remote.version);
+
+            window.location.replace(url);
+            return;
+        }
+    } catch (error) {
+        console.warn("Не удалось проверить обновление программы:", error);
+    }
+}
+
 const SUPABASE_URL =
     "https://lurjmjgtqogwlxkyauso.supabase.co";
 
@@ -1634,7 +1668,9 @@ async function saveClient() {
 
         closeClientModal();
 
-        await loadData();
+        await checkForProgramUpdate().finally(() => {
+    loadData();
+});
 
 
     } catch (error) {
