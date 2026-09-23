@@ -6,6 +6,127 @@
 <title>СТО</title>
 
 <style>
+
+    .kick-scene-bg {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.68);
+        z-index: 6000;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .kick-scene {
+        width: min(520px, 100%);
+        background: white;
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: 0 15px 45px rgba(0,0,0,0.35);
+        text-align: center;
+        overflow: hidden;
+    }
+
+    .kick-stage {
+        position: relative;
+        height: 180px;
+        border-radius: 12px;
+        overflow: hidden;
+        background: linear-gradient(180deg, #dbeafe 0 60%, #9ca3af 61% 100%);
+    }
+
+    .kick-character {
+        position: absolute;
+        bottom: 22px;
+        font-size: 58px;
+        line-height: 1;
+        user-select: none;
+    }
+
+    .kick-boss {
+        left: 80px;
+        animation: bossWalk 0.8s ease-in-out both;
+    }
+
+    .kick-engineer {
+        right: 95px;
+        animation: engineerKick 0.8s 0.65s cubic-bezier(.2,.8,.2,1) both;
+    }
+
+    .kick-leg {
+        position: absolute;
+        left: 145px;
+        bottom: 48px;
+        font-size: 45px;
+        transform-origin: left center;
+        animation: kickLeg 0.8s 0.55s ease-in-out both;
+    }
+
+    .kick-tools-fly {
+        position: absolute;
+        right: 25px;
+        top: 55px;
+        font-size: 34px;
+        opacity: 0;
+        animation: toolsFly 0.8s 0.72s ease-out both;
+    }
+
+    .kick-swear {
+        position: absolute;
+        left: 50%;
+        top: 16px;
+        transform: translateX(-50%) scale(0);
+        font-size: 25px;
+        font-weight: 900;
+        color: #b91c1c;
+        white-space: nowrap;
+        animation: swearPop 0.65s 0.45s cubic-bezier(.2,1.4,.4,1) both;
+    }
+
+    .kick-text {
+        margin-top: 12px;
+        font-weight: bold;
+        font-size: 18px;
+    }
+
+    .kick-subtext {
+        margin-top: 5px;
+        color: #666;
+        font-size: 14px;
+    }
+
+    @keyframes bossWalk {
+        0% { transform: translateX(-120px); }
+        70% { transform: translateX(15px); }
+        100% { transform: translateX(0); }
+    }
+
+    @keyframes kickLeg {
+        0%,45% { transform: rotate(0deg); opacity: 0; }
+        55% { transform: rotate(-28deg); opacity: 1; }
+        70% { transform: rotate(32deg); opacity: 1; }
+        100% { transform: rotate(0deg); opacity: 0; }
+    }
+
+    @keyframes engineerKick {
+        0%,45% { transform: translateX(0) rotate(0); }
+        58% { transform: translateX(15px) rotate(-5deg); }
+        100% { transform: translateX(230px) rotate(35deg); }
+    }
+
+    @keyframes toolsFly {
+        0% { opacity: 0; transform: translate(0,0) rotate(0); }
+        20% { opacity: 1; }
+        100% { opacity: 0; transform: translate(130px,-65px) rotate(180deg); }
+    }
+
+    @keyframes swearPop {
+        0% { transform: translateX(-50%) scale(0); opacity: 0; }
+        65% { transform: translateX(-50%) scale(1.15); opacity: 1; }
+        100% { transform: translateX(-50%) scale(1); opacity: 1; }
+    }
+
     .version-check-bg {
         display: none;
         position: fixed;
@@ -528,6 +649,21 @@
 </div>
 
 
+
+    <div id="kickSceneBg" class="kick-scene-bg" aria-hidden="true">
+        <div class="kick-scene">
+            <div class="kick-stage">
+                <div class="kick-swear">«БЛЯТЬ, ГДЕ ОБНОВЛЕНИЕ?!»</div>
+                <div class="kick-character kick-boss">👨‍💼</div>
+                <div class="kick-leg">🦵</div>
+                <div class="kick-character kick-engineer">👨‍🔧</div>
+                <div class="kick-tools-fly">🔧⚙️📋</div>
+            </div>
+            <div class="kick-text">Техдиректор провёл внеплановую мотивацию 😄</div>
+            <div class="kick-subtext">Инженер: «Принял! Уже делаю!»</div>
+        </div>
+    </div>
+
     <div id="versionCheckBg" class="version-check-bg">
         <div class="version-check-modal">
             <div class="version-update-scene" aria-hidden="true">
@@ -862,7 +998,7 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.7";
+const APP_VERSION = "0.3.8";
 
 function showVersionCheck(text, success = false) {
     const bg = document.getElementById("versionCheckBg");
@@ -4843,3 +4979,22 @@ function escapeAttr(
 
 
 function kickEngineer() {
+    const bg = document.getElementById("kickSceneBg");
+    if (!bg) return;
+
+    bg.style.display = "flex";
+
+    const stage = bg.querySelector(".kick-stage");
+    if (stage) {
+        stage.querySelectorAll(".kick-character, .kick-leg, .kick-tools-fly, .kick-swear")
+            .forEach(el => {
+                el.style.animation = "none";
+                void el.offsetWidth;
+                el.style.animation = "";
+            });
+    }
+
+    setTimeout(() => {
+        bg.style.display = "none";
+    }, 2600);
+}
