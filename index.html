@@ -30,7 +30,7 @@
 
     .kick-stage {
         position: relative;
-        height: 180px;
+        height: 300px;
         border-radius: 12px;
         overflow: hidden;
         background: linear-gradient(180deg, #dbeafe 0 60%, #9ca3af 61% 100%);
@@ -38,38 +38,38 @@
 
     .kick-character {
         position: absolute;
-        bottom: 22px;
-        font-size: 58px;
+        bottom: 18px;
+        font-size: 100px;
         line-height: 1;
         user-select: none;
     }
 
     .kick-boss {
-        left: 80px;
-        animation: bossWalk 0.8s ease-in-out both;
+        left: 95px;
+        animation: bossWalk 1.6s ease-in-out both;
     }
 
     .kick-engineer {
-        right: 95px;
-        animation: engineerKick 0.8s 0.65s cubic-bezier(.2,.8,.2,1) both;
+        right: 90px;
+        animation: engineerKick 1.9s 1.7s cubic-bezier(.2,.8,.2,1) both;
     }
 
     .kick-leg {
         position: absolute;
-        left: 145px;
-        bottom: 48px;
-        font-size: 45px;
+        left: 185px;
+        bottom: 105px;
+        font-size: 72px;
         transform-origin: left center;
-        animation: kickLeg 0.8s 0.55s ease-in-out both;
+        animation: kickLeg 2.2s 1.55s ease-in-out both;
     }
 
     .kick-tools-fly {
         position: absolute;
         right: 25px;
-        top: 55px;
-        font-size: 34px;
+        top: 75px;
+        font-size: 40px;
         opacity: 0;
-        animation: toolsFly 0.8s 0.72s ease-out both;
+        animation: toolsFly 1.8s 2.0s ease-out both;
     }
 
     .kick-swear {
@@ -81,7 +81,7 @@
         font-weight: 900;
         color: #b91c1c;
         white-space: nowrap;
-        animation: swearPop 0.65s 0.45s cubic-bezier(.2,1.4,.4,1) both;
+        animation: swearPop 1s 0.9s cubic-bezier(.2,1.4,.4,1) both;
     }
 
     .kick-text {
@@ -97,22 +97,24 @@
     }
 
     @keyframes bossWalk {
-        0% { transform: translateX(-120px); }
-        70% { transform: translateX(15px); }
+        0% { transform: translateX(-180px); }
+        70% { transform: translateX(20px); }
         100% { transform: translateX(0); }
     }
 
     @keyframes kickLeg {
-        0%,45% { transform: rotate(0deg); opacity: 0; }
-        55% { transform: rotate(-28deg); opacity: 1; }
-        70% { transform: rotate(32deg); opacity: 1; }
+        0%,30% { transform: rotate(0deg); opacity: 0; }
+        45% { transform: rotate(-8deg); opacity: 1; }
+        62% { transform: rotate(38deg); opacity: 1; }
+        72% { transform: rotate(18deg); opacity: 1; }
         100% { transform: rotate(0deg); opacity: 0; }
     }
 
     @keyframes engineerKick {
-        0%,45% { transform: translateX(0) rotate(0); }
-        58% { transform: translateX(15px) rotate(-5deg); }
-        100% { transform: translateX(230px) rotate(35deg); }
+        0%,48% { transform: translateX(0) rotate(0); }
+        62% { transform: translateX(8px) rotate(-3deg); }
+        78% { transform: translateX(55px) rotate(8deg); }
+        100% { transform: translateX(245px) rotate(38deg); }
     }
 
     @keyframes toolsFly {
@@ -5022,7 +5024,7 @@ function kickEngineer() {
 
     setTimeout(() => {
         bg.style.display = "none";
-    }, 2600);
+    }, 5600);
 }
 
 
