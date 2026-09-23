@@ -51,6 +51,86 @@
         to { transform: rotate(360deg); }
     }
 
+    .version-check-modal {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .version-update-scene {
+        height: 88px;
+        margin: 4px 0 16px;
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+        background: linear-gradient(180deg, #e0f2fe 0%, #f8fafc 62%, #d1d5db 63%, #9ca3af 100%);
+    }
+
+    .version-road {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 10px;
+        border-top: 3px dashed #fff;
+        animation: roadMove 0.55s linear infinite;
+    }
+
+    .version-car {
+        position: absolute;
+        left: 50%;
+        bottom: 17px;
+        transform: translateX(-50%);
+        font-size: 42px;
+        animation: carBounce 0.45s ease-in-out infinite alternate;
+    }
+
+    .version-tools {
+        position: absolute;
+        right: 20px;
+        top: 10px;
+        font-size: 25px;
+        animation: toolsWiggle 0.8s ease-in-out infinite;
+    }
+
+    .version-spark {
+        position: absolute;
+        left: 22%;
+        top: 20px;
+        font-size: 18px;
+        animation: sparkPop 0.9s ease-in-out infinite;
+    }
+
+    .version-dots::after {
+        content: "";
+        animation: dots 1.2s steps(4, end) infinite;
+    }
+
+    @keyframes carBounce {
+        from { transform: translateX(-50%) translateY(0) rotate(-1deg); }
+        to { transform: translateX(-50%) translateY(-5px) rotate(1deg); }
+    }
+
+    @keyframes roadMove {
+        from { background-position: 0 0; }
+        to { background-position: -35px 0; }
+    }
+
+    @keyframes toolsWiggle {
+        0%,100% { transform: rotate(-8deg) translateY(0); }
+        50% { transform: rotate(8deg) translateY(3px); }
+    }
+
+    @keyframes sparkPop {
+        0%,100% { opacity: 0.25; transform: scale(0.8); }
+        50% { opacity: 1; transform: scale(1.25); }
+    }
+
+    @keyframes dots {
+        0% { content: ""; }
+        25% { content: "."; }
+        50% { content: ".."; }
+        75%,100% { content: "..."; }
+    }
+
     * {
         box-sizing: border-box;
     }
@@ -437,6 +517,10 @@
         <button class="btn-danger" onclick="alert('Раздел «Черный список» пока находится в разработке.')">
             🚫 Черный список
         </button>
+
+        <button class="btn-secondary" onclick="kickEngineer()">
+            👨‍🔧 Пнуть инженера
+        </button>
     </div>
 
     <div id="clientsList" class="clients-list" style="margin-top:20px;"></div>
@@ -446,6 +530,12 @@
 
     <div id="versionCheckBg" class="version-check-bg">
         <div class="version-check-modal">
+            <div class="version-update-scene" aria-hidden="true">
+                <div class="version-road"></div>
+                <div class="version-car">🚗💨</div>
+                <div class="version-tools">🔧⚙️</div>
+                <div class="version-spark">✨</div>
+            </div>
             <div class="version-check-spinner" id="versionCheckSpinner"></div>
             <div class="version-check-title">Проверка версии</div>
             <div class="version-check-text" id="versionCheckText">
@@ -772,7 +862,7 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.5";
+const APP_VERSION = "0.3.6";
 
 function showVersionCheck(text, success = false) {
     const bg = document.getElementById("versionCheckBg");
@@ -846,7 +936,11 @@ async function checkForProgramUpdate() {
             "&refresh=" +
             Date.now();
 
-        window.location.replace(freshUrl);
+        showVersionCheck("Найдено обновление " + remote.version + ". Обновляем программу...", false);
+
+        setTimeout(() => {
+            window.location.replace(freshUrl);
+        }, 900);
 
     } catch (error) {
         showVersionCheck("Не удалось проверить версию. Запускаем программу.", true);
@@ -4700,6 +4794,16 @@ function escapeAttr(
         value
     );
 
+}
+
+
+function kickEngineer() {
+    showVersionCheck("Инженер получил пинка. Проверяем, всё ли обновилось 😄", false);
+
+    setTimeout(() => {
+        closeVersionCheck();
+        alert("👨‍🔧 Инженер: «Принял! Обновления под контролем.»");
+    }, 1300);
 }
 
 
