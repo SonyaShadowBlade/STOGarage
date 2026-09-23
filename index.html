@@ -6,6 +6,51 @@
 <title>СТО</title>
 
 <style>
+    .version-check-bg {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.55);
+        z-index: 5000;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .version-check-modal {
+        background: white;
+        width: min(420px, 100%);
+        border-radius: 14px;
+        padding: 24px;
+        box-shadow: 0 10px 35px rgba(0,0,0,0.25);
+        text-align: center;
+    }
+
+    .version-check-title {
+        font-size: 21px;
+        font-weight: bold;
+        margin-bottom: 12px;
+    }
+
+    .version-check-text {
+        color: #555;
+        line-height: 1.5;
+    }
+
+    .version-check-spinner {
+        width: 30px;
+        height: 30px;
+        border: 3px solid #e5e7eb;
+        border-top-color: #2563eb;
+        border-radius: 50%;
+        animation: versionSpin 0.8s linear infinite;
+        margin: 0 auto 15px;
+    }
+
+    @keyframes versionSpin {
+        to { transform: rotate(360deg); }
+    }
+
     * {
         box-sizing: border-box;
     }
@@ -717,7 +762,7 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.4";
+const APP_VERSION = "0.3.5";
 
 async function checkForProgramUpdate() {
     try {
@@ -732,7 +777,11 @@ async function checkForProgramUpdate() {
             }
         );
 
-        if (!response.ok) return;
+        if (!response.ok) {
+            showVersionCheck("Не удалось проверить версию. Запускаем программу.", true);
+            setTimeout(closeVersionCheck, 1200);
+            return;
+        }
 
         const remote = await response.json();
 
@@ -4641,6 +4690,16 @@ function escapeAttr(
 loadData();
 
 </script>
+
+    <div id="versionCheckBg" class="version-check-bg">
+        <div class="version-check-modal">
+            <div class="version-check-spinner" id="versionCheckSpinner"></div>
+            <div class="version-check-title">Проверка версии</div>
+            <div class="version-check-text" id="versionCheckText">
+                Проверяем актуальность программы...
+            </div>
+        </div>
+    </div>
 
 </body>
 </html>
