@@ -664,6 +664,13 @@
         </div>
     </div>
 
+    <div id="diagnosticBg" class="version-check-bg" style="display:flex;">
+        <div class="version-check-modal" style="max-width:620px;text-align:left;">
+            <div class="version-check-title">🔧 Диагностика запуска СТО</div>
+            <pre id="diagnosticText" style="white-space:pre-wrap;font-family:monospace;font-size:14px;line-height:1.6;margin:12px 0;">Запуск JavaScript...</pre>
+        </div>
+    </div>
+
     <div id="versionCheckBg" class="version-check-bg">
         <div class="version-check-modal">
             <div class="version-update-scene" aria-hidden="true">
@@ -5022,13 +5029,63 @@ function kickEngineer() {
 
     
 /* =====================================================
-   ЗАПУСК ПРОГРАММЫ
+   ДИАГНОСТИКА И ЗАПУСК ПРОГРАММЫ
 ===================================================== */
 
-/* Запускаем загрузку базы независимо от проверки версии.
-   Даже если GitHub Pages/сеть задержит version.json,
-   подключение к Supabase не должно зависеть от этого. */
-loadData();
+async function runStartupDiagnostic() {
+    const out = document.getElementById("diagnosticText");
+    const bg = document.getElementById("diagnosticBg");
+    const lines = [];
 
-checkForProgramUpdate();
+    function log(text) {
+        lines.push(text);
+        if (out) out.textContent = lines.join("\n");
+        console.log(text);
+    }
+
+    log("✓ JavaScript запущен");
+    log("• APP_VERSION: " + APP_VERSION);
+    log("• Страница: " + window.location.href);
+
+    try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 8000);
+        const response = await fetch("version.json?diag=" + Date.now(), {
+            cache: "no-store",
+            signal: controller.signal
+        });
+        clearTimeout(timer);
+
+        if (!response.ok) {
+            log("❌ version.json: HTTP " + response.status);
+        } else {
+            const remote = await response.json();
+            log("✓ version.json доступен");
+            log("• Версия на GitHub: " + (remote.version || "не указана"));
+        }
+    } catch (e) {
+        log("❌ version.json: " + (e.name === "AbortError" ? "тайм-аут 8 секунд" : e.message));
+    }
+
+    try {
+        log("• Проверяем Supabase...");
+        await loadData();
+        log("✓ Supabase и загрузка данных завершены");
+        log("• Клиентов: " + clients.length);
+        log("• Автомобилей: " + vehicles.length);
+    } catch (e) {
+        log("❌ Supabase/загрузка: " + (e.message || e));
+    }
+
+    log("");
+    log("Если выше все пункты ✓ — проблема не в GitHub/Supabase.");
+    log("Диагностическое окно закроется через 6 секунд.");
+
+    setTimeout(() => {
+        if (bg) bg.style.display = "none";
+        checkForProgramUpdate();
+    }, 6000);
+}
+
+runStartupDiagnostic();
 
