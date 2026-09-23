@@ -764,7 +764,31 @@
 
 const APP_VERSION = "0.3.5";
 
+function showVersionCheck(text, success = false) {
+    const bg = document.getElementById("versionCheckBg");
+    const textEl = document.getElementById("versionCheckText");
+    const spinner = document.getElementById("versionCheckSpinner");
+
+    if (!bg || !textEl || !spinner) return;
+
+    bg.style.display = "flex";
+    textEl.textContent = text;
+
+    if (success) {
+        spinner.style.display = "none";
+    } else {
+        spinner.style.display = "block";
+    }
+}
+
+function closeVersionCheck() {
+    const bg = document.getElementById("versionCheckBg");
+    if (bg) bg.style.display = "none";
+}
+
 async function checkForProgramUpdate() {
+    showVersionCheck("Проверяем актуальность программы...");
+
     try {
         const response = await fetch(
             "version.json?check=" + Date.now(),
@@ -779,38 +803,30 @@ async function checkForProgramUpdate() {
 
         if (!response.ok) {
             showVersionCheck("Не удалось проверить версию. Запускаем программу.", true);
-            setTimeout(closeVersionCheck, 1200);
+            setTimeout(closeVersionCheck, 1500);
             return;
         }
 
         const remote = await response.json();
 
-        if (
-            !remote ||
-            !remote.version ||
-            remote.version === APP_VERSION
-        ) {
-            sessionStorage.removeItem(
-                "sto_update_attempted_version"
-            );
+        if (!remote || !remote.version || remote.version === APP_VERSION) {
+            sessionStorage.removeItem("sto_update_attempted_version");
+            showVersionCheck("Версия программы актуальна: " + APP_VERSION, true);
+            setTimeout(closeVersionCheck, 1500);
             return;
         }
 
         const guardKey = "sto_update_attempted_version";
-        const attemptedVersion =
-            sessionStorage.getItem(guardKey);
+        const attemptedVersion = sessionStorage.getItem(guardKey);
 
         if (attemptedVersion === remote.version) {
-            console.warn(
-                "Обновление уже пыталось примениться. Продолжаем запуск программы."
-            );
+            console.warn("Обновление уже пыталось примениться. Продолжаем запуск программы.");
+            showVersionCheck("Текущая версия: " + APP_VERSION + ". Проверка завершена.", true);
+            setTimeout(closeVersionCheck, 1500);
             return;
         }
 
-        sessionStorage.setItem(
-            guardKey,
-            remote.version
-        );
+        sessionStorage.setItem(guardKey, remote.version);
 
         const freshUrl =
             window.location.origin +
@@ -820,18 +836,12 @@ async function checkForProgramUpdate() {
             "&refresh=" +
             Date.now();
 
-        /*
-            Загружаем новую страницу с уникальным URL.
-            После этого браузер получает отдельный документ,
-            а не использует обычную старую страницу.
-        */
         window.location.replace(freshUrl);
 
     } catch (error) {
-        console.warn(
-            "Не удалось проверить обновление программы:",
-            error
-        );
+        showVersionCheck("Не удалось проверить версию. Запускаем программу.", true);
+        setTimeout(closeVersionCheck, 1500);
+        console.warn("Не удалось проверить обновление программы:", error);
     }
 }
 
