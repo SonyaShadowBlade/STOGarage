@@ -4697,7 +4697,9 @@ function escapeAttr(
    ЗАПУСК
 ===================================================== */
 
-loadData();
+checkForProgramUpdate().finally(() => {
+    loadData();
+});
 
 </script>
 
