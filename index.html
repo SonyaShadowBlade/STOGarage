@@ -717,14 +717,18 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.3";
+const APP_VERSION = "0.3.4";
 
 async function checkForProgramUpdate() {
     try {
         const response = await fetch(
-            "version.json?v=" + Date.now(),
+            "version.json?check=" + Date.now(),
             {
-                cache: "no-store"
+                cache: "no-store",
+                headers: {
+                    "Cache-Control": "no-cache",
+                    "Pragma": "no-cache"
+                }
             }
         );
 
@@ -733,41 +737,47 @@ async function checkForProgramUpdate() {
         const remote = await response.json();
 
         if (
-            remote &&
-            remote.version &&
-            remote.version !== APP_VERSION
+            !remote ||
+            !remote.version ||
+            remote.version === APP_VERSION
         ) {
-            const guardKey = "sto_update_attempted_version";
-            const attemptedVersion =
-                sessionStorage.getItem(guardKey);
-
-            if (attemptedVersion === remote.version) {
-                console.warn(
-                    "Обновление уже пыталось примениться. Продолжаем запуск программы."
-                );
-                return;
-            }
-
-            sessionStorage.setItem(
-                guardKey,
-                remote.version
+            sessionStorage.removeItem(
+                "sto_update_attempted_version"
             );
-
-            const url =
-                window.location.origin +
-                window.location.pathname +
-                "?v=" +
-                encodeURIComponent(remote.version) +
-                "&t=" +
-                Date.now();
-
-            window.location.replace(url);
             return;
         }
 
-        sessionStorage.removeItem(
-            "sto_update_attempted_version"
+        const guardKey = "sto_update_attempted_version";
+        const attemptedVersion =
+            sessionStorage.getItem(guardKey);
+
+        if (attemptedVersion === remote.version) {
+            console.warn(
+                "Обновление уже пыталось примениться. Продолжаем запуск программы."
+            );
+            return;
+        }
+
+        sessionStorage.setItem(
+            guardKey,
+            remote.version
         );
+
+        const freshUrl =
+            window.location.origin +
+            window.location.pathname +
+            "?version=" +
+            encodeURIComponent(remote.version) +
+            "&refresh=" +
+            Date.now();
+
+        /*
+            Загружаем новую страницу с уникальным URL.
+            После этого браузер получает отдельный документ,
+            а не использует обычную старую страницу.
+        */
+        window.location.replace(freshUrl);
+
     } catch (error) {
         console.warn(
             "Не удалось проверить обновление программы:",
