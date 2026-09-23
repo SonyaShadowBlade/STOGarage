@@ -5032,7 +5032,10 @@ function kickEngineer() {
    ЗАПУСК ПРОГРАММЫ
 ===================================================== */
 
-checkForProgramUpdate().finally(() => {
-    loadData();
-});
+/* Запускаем загрузку базы независимо от проверки версии.
+   Даже если GitHub Pages/сеть задержит version.json,
+   подключение к Supabase не должно зависеть от этого. */
+loadData();
+
+checkForProgramUpdate();
 
