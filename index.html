@@ -672,8 +672,15 @@
 
     
     <div id="changelogBg" class="version-check-bg" style="display:none;">
-        <div class="version-check-modal" style="max-width:700px;text-align:left;max-height:85vh;overflow-y:auto;">
-            <div class="version-check-title">💡 Что нового</div>
+        <div class="version-check-modal" style="max-width:700px;text-align:left;max-width:700px;max-height:85vh;overflow-y:auto;position:relative;">
+            <button
+                class="btn-secondary"
+                onclick="closeChangelog()"
+                style="position:absolute;top:12px;right:12px;min-width:40px;padding:8px 12px;"
+                aria-label="Закрыть"
+                title="Закрыть"
+            >✕</button>
+            <div class="version-check-title" style="padding-right:55px;">💡 Что нового</div>
             <div id="changelogContent"></div>
             <div style="margin-top:18px;text-align:right;">
                 <button class="btn-secondary" onclick="closeChangelog()">Закрыть</button>
