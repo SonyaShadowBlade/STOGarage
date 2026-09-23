@@ -631,7 +631,7 @@
             ＋ Добавить клиента
         </button>
 
-        <button class="btn-secondary" onclick="alert('Версия программы: ' + APP_VERSION)">
+        <button class="btn-secondary" onclick="checkVersionNow()">
             ℹ️ Проверить версию
         </button>
 
@@ -1019,6 +1019,13 @@ function showVersionCheck(text, success = false) {
 function closeVersionCheck() {
     const bg = document.getElementById("versionCheckBg");
     if (bg) bg.style.display = "none";
+}
+
+function checkVersionNow() {
+    showVersionCheck("Проверяем актуальность программы...");
+    setTimeout(() => {
+        checkForProgramUpdate();
+    }, 250);
 }
 
 async function checkForProgramUpdate() {
