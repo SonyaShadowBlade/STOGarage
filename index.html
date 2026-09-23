@@ -388,6 +388,10 @@
         <button class="btn-secondary" onclick="alert('Версия программы: ' + APP_VERSION)">
             ℹ️ Проверить версию
         </button>
+
+        <button class="btn-danger" onclick="alert('Раздел «Черный список» пока находится в разработке.')">
+            🚫 Черный список
+        </button>
     </div>
 
     <div id="clientsList" class="clients-list" style="margin-top:20px;"></div>
@@ -713,7 +717,7 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.2";
+const APP_VERSION = "0.3.3";
 
 async function checkForProgramUpdate() {
     try {
