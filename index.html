@@ -637,6 +637,10 @@
             ℹ️ Проверить версию
         </button>
 
+        <button class="btn-secondary" onclick="openChangelog()">
+            💡 Что нового
+        </button>
+
         <button class="btn-danger" onclick="alert('Раздел «Черный список» пока находится в разработке.')">
             🚫 Черный список
         </button>
@@ -663,6 +667,17 @@
             </div>
             <div class="kick-text">Техдиректор провёл внеплановую мотивацию 😄</div>
             <div class="kick-subtext">Инженер: «Принял! Уже делаю!»</div>
+        </div>
+    </div>
+
+    
+    <div id="changelogBg" class="version-check-bg" style="display:none;">
+        <div class="version-check-modal" style="max-width:700px;text-align:left;max-height:85vh;overflow-y:auto;">
+            <div class="version-check-title">💡 Что нового</div>
+            <div id="changelogContent"></div>
+            <div style="margin-top:18px;text-align:right;">
+                <button class="btn-secondary" onclick="closeChangelog()">Закрыть</button>
+            </div>
         </div>
     </div>
 
@@ -1020,6 +1035,96 @@ function showVersionCheck(text, success = false) {
 
 function closeVersionCheck() {
     const bg = document.getElementById("versionCheckBg");
+    if (bg) bg.style.display = "none";
+}
+
+const CHANGELOG = [
+    {
+        version: "0.3.8",
+        date: "23.09.2026",
+        changes: [
+            "Добавлена анимация «Пнуть инженера».",
+            "Улучшен механизм автоматической проверки и обновления программы.",
+            "Добавлена расширенная диагностика запуска для поиска проблем с GitHub Pages и Supabase."
+        ]
+    },
+    {
+        version: "0.3.7",
+        changes: [
+            "Усилена автоматическая проверка версии при запуске.",
+            "Обновление стало надёжнее при работе с кэшем браузера."
+        ]
+    },
+    {
+        version: "0.3.6",
+        changes: [
+            "Добавлена анимация обновления программы.",
+            "Добавлена кнопка «Пнуть инженера»."
+        ]
+    },
+    {
+        version: "0.3.5",
+        changes: [
+            "Добавлена проверка версии при запуске программы."
+        ]
+    },
+    {
+        version: "0.3.4",
+        changes: [
+            "Усилен механизм автоматического обновления."
+        ]
+    },
+    {
+        version: "0.3.3",
+        changes: [
+            "Добавлена кнопка «Черный список»."
+        ]
+    },
+    {
+        version: "0.3.2",
+        changes: [
+            "Добавлена кнопка «Проверить версию»."
+        ]
+    },
+    {
+        version: "0.3.1",
+        changes: [
+            "Улучшен механизм обновлений."
+        ]
+    },
+    {
+        version: "0.3.0",
+        changes: [
+            "Добавлена первая версия механизма автоматического обновления."
+        ]
+    }
+];
+
+function openChangelog() {
+    const bg = document.getElementById("changelogBg");
+    const content = document.getElementById("changelogContent");
+    if (!bg || !content) return;
+
+    content.innerHTML = CHANGELOG.map(item => {
+        const current = item.version === APP_VERSION;
+        return `
+            <div style="border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-top:12px;background:${current ? "#eff6ff" : "#fff"};">
+                <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+                    <strong style="font-size:18px;">Версия ${escapeHtml(item.version)}${current ? " — текущая" : ""}</strong>
+                    ${item.date ? `<span style="color:#777;font-size:13px;">${escapeHtml(item.date)}</span>` : ""}
+                </div>
+                <ul style="margin:10px 0 0 20px;padding:0;">
+                    ${item.changes.map(change => `<li style="margin:6px 0;">${escapeHtml(change)}</li>`).join("")}
+                </ul>
+            </div>
+        `;
+    }).join("");
+
+    bg.style.display = "flex";
+}
+
+function closeChangelog() {
+    const bg = document.getElementById("changelogBg");
     if (bg) bg.style.display = "none";
 }
 
