@@ -380,9 +380,15 @@
         >
     </div>
 
-    <button class="btn-primary" onclick="openClientModal()">
-        ＋ Добавить клиента
-    </button>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+        <button class="btn-primary" onclick="openClientModal()">
+            ＋ Добавить клиента
+        </button>
+
+        <button class="btn-secondary" onclick="alert('Версия программы: ' + APP_VERSION)">
+            ℹ️ Проверить версию
+        </button>
+    </div>
 
     <div id="clientsList" class="clients-list" style="margin-top:20px;"></div>
 
@@ -707,7 +713,7 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.1";
+const APP_VERSION = "0.3.2";
 
 async function checkForProgramUpdate() {
     try {
