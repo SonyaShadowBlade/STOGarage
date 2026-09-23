@@ -1031,16 +1031,22 @@ async function checkForProgramUpdate() {
     const forcedVersion = urlParams.get("version");
 
     try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
         const response = await fetch(
             "version.json?check=" + Date.now(),
             {
                 cache: "no-store",
+                signal: controller.signal,
                 headers: {
                     "Cache-Control": "no-cache",
                     "Pragma": "no-cache"
                 }
             }
         );
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             showVersionCheck("Не удалось проверить версию. Запускаем программу.", true);
@@ -2058,9 +2064,12 @@ async function saveClient() {
         closeClientModal();
 
         await checkForProgramUpdate().finally(() => {
-    checkForProgramUpdate().finally(() => {
-    loadData();
-});
+    /* Запускаем загрузку базы независимо от проверки версии.
+   Даже если GitHub Pages/сеть задержит version.json,
+   подключение к Supabase не должно зависеть от этого. */
+loadData();
+
+checkForProgramUpdate();
 });
 
 
