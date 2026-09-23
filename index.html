@@ -1202,22 +1202,36 @@ function setStatus(text, error = false) {
 
 async function api(path, options = {}) {
 
-    const response = await fetch(
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-        SUPABASE_URL +
-        "/rest/v1/" +
-        path,
+    let response;
 
-        {
-            ...options,
-
-            headers: {
-                ...headers,
-                ...(options.headers || {})
+    try {
+        response = await fetch(
+            SUPABASE_URL +
+            "/rest/v1/" +
+            path,
+            {
+                ...options,
+                signal: controller.signal,
+                headers: {
+                    ...headers,
+                    ...(options.headers || {})
+                }
             }
+        );
+    } catch (error) {
+        clearTimeout(timeoutId);
+
+        if (error.name === "AbortError") {
+            throw new Error("Supabase не отвечает более 8 секунд");
         }
 
-    );
+        throw error;
+    }
+
+    clearTimeout(timeoutId);
 
 
     if (!response.ok) {
@@ -1354,15 +1368,19 @@ async function loadData() {
 
     try {
 
+        setStatus("Подключаемся к Supabase...");
+
         clients = await api(
             "clients?select=*&order=name.asc"
         );
 
+        setStatus("Клиенты получены: " + clients.length + ". Загружаем автомобили...");
 
         vehicles = await api(
             "vehicles?select=*&order=created_at.desc"
         );
 
+        setStatus("Автомобили получены. Загружаем историю обслуживания...");
 
         await loadSuggestions();
 
