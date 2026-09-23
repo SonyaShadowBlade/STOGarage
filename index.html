@@ -1000,7 +1000,27 @@
 
 
 <script>
+window.__stoDiagnosticBoot = true;
+window.addEventListener("error", function(event) {
+    const out = document.getElementById("diagnosticText");
+    if (out) {
+        out.textContent += "\n\n❌ ОШИБКА JAVASCRIPT:\n" +
+            (event.message || "неизвестная ошибка") +
+            "\nСтрока: " + (event.lineno || "?");
+    }
+});
+window.addEventListener("unhandledrejection", function(event) {
+    const out = document.getElementById("diagnosticText");
+    if (out) {
+        out.textContent += "\n\n❌ PROMISE ERROR:\n" +
+            (event.reason?.message || String(event.reason));
+    }
+});
+const bootOut = document.getElementById("diagnosticText");
+if (bootOut) bootOut.textContent = "✓ Диагностический JavaScript запущен\n• Ждём основной код СТО...";
+</script>
 
+<script>
 /* =====================================================
    SUPABASE
 ===================================================== */
