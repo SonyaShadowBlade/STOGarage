@@ -1014,7 +1014,7 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.8";
+const APP_VERSION = "0.3.9";
 
 function showVersionCheck(text, success = false) {
     const bg = document.getElementById("versionCheckBg");
@@ -1040,12 +1040,20 @@ function closeVersionCheck() {
 
 const CHANGELOG = [
     {
+        version: "0.3.9",
+        date: "23.09.2026",
+        changes: [
+            "Кнопка «Проверить версию» теперь принудительно перезагружает страницу при обнаружении новой версии.",
+            "Добавлена защита от использования старого index.html из кэша браузера.",
+            "Улучшена ручная проверка обновлений."
+        ]
+    },
+    {
         version: "0.3.8",
         date: "23.09.2026",
         changes: [
             "Добавлена анимация «Пнуть инженера».",
-            "Улучшен механизм автоматической проверки и обновления программы.",
-            "Добавлена расширенная диагностика запуска для поиска проблем с GitHub Pages и Supabase."
+            "Улучшен механизм автоматической проверки и обновления программы."
         ]
     },
     {
@@ -1129,13 +1137,20 @@ function closeChangelog() {
 }
 
 function checkVersionNow() {
+    /*
+        Ручная проверка обновления.
+        Если на GitHub есть новая версия, страница
+        будет принудительно открыта заново с уникальным
+        параметром cache-buster, чтобы браузер не взял
+        старый index.html из кэша.
+    */
     showVersionCheck("Проверяем актуальность программы...");
     setTimeout(() => {
-        checkForProgramUpdate();
+        checkForProgramUpdate(true);
     }, 250);
 }
 
-async function checkForProgramUpdate() {
+async function checkForProgramUpdate(manualCheck = false) {
     showVersionCheck("Проверяем актуальность программы...");
 
     const updateKey = "sto_update_target_version";
@@ -1238,9 +1253,15 @@ async function checkForProgramUpdate() {
             "&refresh=" +
             Date.now();
 
+        /*
+            Принудительно открываем страницу заново.
+            Уникальный refresh-параметр заставляет браузер
+            запросить новый URL, а не использовать текущую
+            закэшированную страницу.
+        */
         setTimeout(() => {
             window.location.replace(freshUrl);
-        }, 900);
+        }, manualCheck ? 700 : 900);
 
     } catch (error) {
         showVersionCheck("Не удалось проверить версию. Запускаем программу.", true);
