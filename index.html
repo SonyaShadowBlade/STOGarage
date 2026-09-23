@@ -1153,15 +1153,25 @@ function closeChangelog() {
 
 function checkVersionNow() {
     /*
-        Ручная проверка обновления.
-        Если на GitHub есть новая версия, страница
-        будет принудительно открыта заново с уникальным
-        параметром cache-buster, чтобы браузер не взял
-        старый index.html из кэша.
+        Ручная проверка теперь НЕ зависит от номера версии.
+        Нажатие кнопки всегда получает свежую страницу с GitHub Pages
+        и обходит кэш. Поэтому для обычных изменений APP_VERSION
+        менять не нужно.
     */
-    showVersionCheck("Проверяем актуальность программы...");
+    showVersionCheck("Проверяем обновления...");
+    
     setTimeout(() => {
-        checkForProgramUpdate(true);
+        const freshUrl =
+            window.location.origin +
+            window.location.pathname +
+            "?refresh=" +
+            Date.now();
+
+        showVersionCheck("Загружаем свежую версию программы...");
+
+        setTimeout(() => {
+            window.location.replace(freshUrl);
+        }, 500);
     }, 250);
 }
 
