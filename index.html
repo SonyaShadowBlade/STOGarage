@@ -862,7 +862,7 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.6";
+const APP_VERSION = "0.3.7";
 
 function showVersionCheck(text, success = false) {
     const bg = document.getElementById("versionCheckBg");
@@ -889,6 +889,11 @@ function closeVersionCheck() {
 async function checkForProgramUpdate() {
     showVersionCheck("Проверяем актуальность программы...");
 
+    const updateKey = "sto_update_target_version";
+    const attemptKey = "sto_update_attempts";
+    const urlParams = new URLSearchParams(window.location.search);
+    const forcedVersion = urlParams.get("version");
+
     try {
         const response = await fetch(
             "version.json?check=" + Date.now(),
@@ -908,35 +913,75 @@ async function checkForProgramUpdate() {
         }
 
         const remote = await response.json();
+        const remoteVersion = remote && remote.version;
 
-        if (!remote || !remote.version || remote.version === APP_VERSION) {
-            sessionStorage.removeItem("sto_update_attempted_version");
+        if (!remoteVersion) {
+            showVersionCheck("Версия не определена. Запускаем программу.", true);
+            setTimeout(closeVersionCheck, 1500);
+            return;
+        }
+
+        /*
+            Если мы уже перезагрузились по запросу обновления
+            и новая версия действительно загружена — очищаем
+            служебные параметры и запускаем программу.
+        */
+        if (forcedVersion === remoteVersion && APP_VERSION === remoteVersion) {
+            sessionStorage.removeItem(updateKey);
+            sessionStorage.removeItem(attemptKey);
+            history.replaceState(null, "", window.location.pathname);
+            showVersionCheck("Обновление завершено. Версия: " + APP_VERSION, true);
+            setTimeout(closeVersionCheck, 900);
+            return;
+        }
+
+        if (APP_VERSION === remoteVersion) {
+            sessionStorage.removeItem(updateKey);
+            sessionStorage.removeItem(attemptKey);
             showVersionCheck("Версия программы актуальна: " + APP_VERSION, true);
-            setTimeout(closeVersionCheck, 1500);
+            setTimeout(closeVersionCheck, 900);
             return;
         }
 
-        const guardKey = "sto_update_attempted_version";
-        const attemptedVersion = sessionStorage.getItem(guardKey);
+        /*
+            Новая версия найдена. Обновление происходит автоматически,
+            без кнопки и без действий пользователя.
+        */
+        let attempts = Number(sessionStorage.getItem(attemptKey) || "0");
+        const targetVersion = sessionStorage.getItem(updateKey);
 
-        if (attemptedVersion === remote.version) {
-            console.warn("Обновление уже пыталось примениться. Продолжаем запуск программы.");
-            showVersionCheck("Текущая версия: " + APP_VERSION + ". Проверка завершена.", true);
-            setTimeout(closeVersionCheck, 1500);
+        if (targetVersion !== remoteVersion) {
+            attempts = 0;
+            sessionStorage.setItem(updateKey, remoteVersion);
+        }
+
+        if (attempts >= 5) {
+            console.warn("Не удалось получить новую версию после 5 попыток.");
+            sessionStorage.removeItem(updateKey);
+            sessionStorage.removeItem(attemptKey);
+            showVersionCheck(
+                "Новая версия найдена, но GitHub Pages ещё не отдал её. Запускаем текущую версию.",
+                true
+            );
+            setTimeout(closeVersionCheck, 2200);
             return;
         }
 
-        sessionStorage.setItem(guardKey, remote.version);
+        attempts += 1;
+        sessionStorage.setItem(attemptKey, String(attempts));
+
+        showVersionCheck(
+            "Найдено обновление " + remoteVersion + ". Обновляем программу...",
+            false
+        );
 
         const freshUrl =
             window.location.origin +
             window.location.pathname +
             "?version=" +
-            encodeURIComponent(remote.version) +
+            encodeURIComponent(remoteVersion) +
             "&refresh=" +
             Date.now();
-
-        showVersionCheck("Найдено обновление " + remote.version + ". Обновляем программу...", false);
 
         setTimeout(() => {
             window.location.replace(freshUrl);
@@ -4798,24 +4843,3 @@ function escapeAttr(
 
 
 function kickEngineer() {
-    showVersionCheck("Инженер получил пинка. Проверяем, всё ли обновилось 😄", false);
-
-    setTimeout(() => {
-        closeVersionCheck();
-        alert("👨‍🔧 Инженер: «Принял! Обновления под контролем.»");
-    }, 1300);
-}
-
-
-/* =====================================================
-   ЗАПУСК
-===================================================== */
-
-checkForProgramUpdate().finally(() => {
-    loadData();
-});
-
-</script>
-
-</body>
-</html>
