@@ -4758,6 +4758,285 @@ function chooseCurrency(
 
 }
 
+function openQuickLineDialog(
+    type
+) {
+
+    return new Promise(resolve => {
+
+        const isPart =
+            type === "part";
+
+        const dialog =
+            document.createElement(
+                "dialog"
+            );
+
+        dialog.style.cssText =
+            "border:none;" +
+            "border-radius:14px;" +
+            "padding:22px;" +
+            "width:min(620px,94vw);" +
+            "box-shadow:0 15px 45px rgba(0,0,0,.3);";
+
+        dialog.innerHTML = `
+            <form method="dialog">
+
+                <div style="font-size:18px;font-weight:bold;margin-bottom:14px;">
+                    ${isPart ? "Добавить запчасть" : "Добавить работу"}
+                </div>
+
+                <div class="field autocomplete-wrap">
+                    <label>${isPart ? "Запчасть" : "Вид работы"} *</label>
+
+                    <input
+                        id="quickLineName"
+                        type="text"
+                        autocomplete="off"
+                        placeholder="${isPart ? "Название запчасти" : "Название работы"}"
+                    >
+
+                    <div
+                        id="quickLineSuggestions"
+                        class="autocomplete-list"
+                    ></div>
+                </div>
+
+                ${isPart ? `
+                    <div class="field">
+                        <label>Бренд</label>
+                        <input id="quickLineBrand" type="text">
+                    </div>
+                ` : ""}
+
+                <div class="grid-3">
+
+                    <div class="field">
+                        <label>Количество</label>
+                        <input
+                            id="quickLineQuantity"
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            value="1"
+                        >
+                    </div>
+
+                    <div class="field">
+                        <label>Цена за единицу</label>
+                        <input
+                            id="quickLinePrice"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value="0"
+                        >
+                    </div>
+
+                    <div class="field">
+                        <label>Валюта</label>
+                        <select id="quickLineCurrency">
+                            ${currencyOptions("EUR")}
+                        </select>
+                    </div>
+
+                </div>
+
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:15px;">
+                    <button
+                        type="button"
+                        class="btn-secondary"
+                        id="quickLineCancel"
+                    >
+                        Отмена
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn-primary"
+                    >
+                        Добавить
+                    </button>
+                </div>
+
+            </form>
+        `;
+
+        document.body.appendChild(
+            dialog
+        );
+
+        const nameInput =
+            dialog.querySelector(
+                "#quickLineName"
+            );
+
+        const suggestionList =
+            dialog.querySelector(
+                "#quickLineSuggestions"
+            );
+
+        setupAutocomplete(
+            nameInput,
+            suggestionList,
+            isPart
+                ? partSuggestions
+                : workSuggestions
+        );
+
+        const finish = value => {
+
+            if (
+                dialog.open
+            ) {
+                dialog.close();
+            }
+
+            dialog.remove();
+
+            resolve(value);
+
+        };
+
+        dialog
+            .querySelector(
+                "#quickLineCancel"
+            )
+            .addEventListener(
+                "click",
+                () => finish(null)
+            );
+
+        dialog
+            .querySelector(
+                "form"
+            )
+            .addEventListener(
+                "submit",
+                event => {
+
+                    event.preventDefault();
+
+                    const name =
+                        nameInput
+                            .value
+                            .trim();
+
+                    if (!name) {
+
+                        nameInput.focus();
+
+                        return;
+
+                    }
+
+                    const quantity =
+                        Number(
+                            dialog
+                                .querySelector(
+                                    "#quickLineQuantity"
+                                )
+                                .value || 1
+                        );
+
+                    const price =
+                        Number(
+                            dialog
+                                .querySelector(
+                                    "#quickLinePrice"
+                                )
+                                .value || 0
+                        );
+
+                    const currency =
+                        dialog
+                            .querySelector(
+                                "#quickLineCurrency"
+                            )
+                            .value;
+
+                    const result = {
+
+                        name: name,
+
+                        quantity:
+                            quantity > 0
+                            ? quantity
+                            : 1,
+
+                        price:
+                            price >= 0
+                            ? price
+                            : 0,
+
+                        currency:
+                            allowedCurrency(
+                                currency
+                            )
+                            ? currency
+                            : "EUR"
+
+                    };
+
+                    if (isPart) {
+
+                        result.brand =
+                            (
+                                dialog
+                                    .querySelector(
+                                        "#quickLineBrand"
+                                    )
+                                    .value ||
+                                ""
+                            )
+                            .trim();
+
+                    }
+
+                    finish(result);
+
+                }
+            );
+
+        dialog.addEventListener(
+            "cancel",
+            event => {
+
+                event.preventDefault();
+
+                finish(null);
+
+            },
+            { once: true }
+        );
+
+        dialog.addEventListener(
+            "close",
+            () => {
+
+                if (
+                    document.body.contains(
+                        dialog
+                    )
+                ) {
+                    dialog.remove();
+                    resolve(null);
+                }
+
+            },
+            { once: true }
+        );
+
+        dialog.showModal();
+
+        nameInput.focus();
+
+    });
+
+}
+
+
+
 
 /* =====================================================
    ДОБАВИТЬ РАБОТУ В СУЩЕСТВУЮЩЕЕ
@@ -4767,59 +5046,16 @@ async function addWorkToService(
     serviceId
 ) {
 
-    const name =
-        prompt(
-            "Введите вид работы:"
+    const data =
+        await openQuickLineDialog(
+            "work"
         );
 
-
-    if (
-        !name ||
-        !name.trim()
-    ) {
-
+    if (!data) {
         return;
     }
 
-
-    const quantityText =
-        prompt(
-            "Количество:",
-            "1"
-        );
-
-
-    const quantity =
-        Number(
-            quantityText ||
-            1
-        );
-
-
-    const priceText =
-        prompt(
-            "Цена за единицу:",
-            "0"
-        );
-
-
-    const price =
-        Number(
-            priceText ||
-            0
-        );
-
-
-    const normalizedCurrency =
-        await chooseCurrency(
-            "EUR"
-        );
-
-    if (!normalizedCurrency) {
-        return;
-    }
-
-try {
+    try {
 
         await api(
 
@@ -4835,20 +5071,16 @@ try {
                             serviceId,
 
                         name:
-                            name.trim(),
+                            data.name,
 
                         quantity:
-                            quantity > 0
-                            ? quantity
-                            : 1,
+                            data.quantity,
 
                         price:
-                            price >= 0
-                            ? price
-                            : 0,
+                            data.price,
 
                         currency:
-                            normalizedCurrency
+                            data.currency
 
                     })
 
@@ -4856,11 +5088,9 @@ try {
 
         );
 
-
         await loadSuggestions();
 
         await loadServices();
-
 
     } catch (error) {
 
@@ -4882,66 +5112,16 @@ async function addPartToService(
     serviceId
 ) {
 
-    const name =
-        prompt(
-            "Введите название запчасти:"
+    const data =
+        await openQuickLineDialog(
+            "part"
         );
 
-
-    if (
-        !name ||
-        !name.trim()
-    ) {
-
+    if (!data) {
         return;
     }
 
-
-    const brand =
-        prompt(
-            "Бренд:",
-            ""
-        );
-
-
-    const quantityText =
-        prompt(
-            "Количество:",
-            "1"
-        );
-
-
-    const quantity =
-        Number(
-            quantityText ||
-            1
-        );
-
-
-    const priceText =
-        prompt(
-            "Цена за единицу:",
-            "0"
-        );
-
-
-    const price =
-        Number(
-            priceText ||
-            0
-        );
-
-
-    const normalizedCurrency =
-        await chooseCurrency(
-            "EUR"
-        );
-
-    if (!normalizedCurrency) {
-        return;
-    }
-
-try {
+    try {
 
         await api(
 
@@ -4957,27 +5137,19 @@ try {
                             serviceId,
 
                         name:
-                            name.trim(),
+                            data.name,
 
                         brand:
-                            (
-                                brand ||
-                                ""
-                            )
-                            .trim(),
+                            data.brand,
 
                         quantity:
-                            quantity > 0
-                            ? quantity
-                            : 1,
+                            data.quantity,
 
                         price:
-                            price >= 0
-                            ? price
-                            : 0,
+                            data.price,
 
                         currency:
-                            normalizedCurrency
+                            data.currency
 
                     })
 
@@ -4985,11 +5157,9 @@ try {
 
         );
 
-
         await loadSuggestions();
 
         await loadServices();
-
 
     } catch (error) {
 
