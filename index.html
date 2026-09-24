@@ -1461,7 +1461,7 @@ function setStatus(text, error = false) {
 async function api(path, options = {}) {
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     let response;
 
@@ -1483,7 +1483,7 @@ async function api(path, options = {}) {
         clearTimeout(timeoutId);
 
         if (error.name === "AbortError") {
-            throw new Error("Supabase не отвечает более 8 секунд");
+            throw new Error("Supabase не отвечает более 30 секунд");
         }
 
         throw error;
