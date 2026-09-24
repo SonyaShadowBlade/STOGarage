@@ -2023,13 +2023,31 @@ function openEditClientModal(id) {
     document.getElementById("clientEmail").value = client.email || "";
     document.getElementById("clientNotes").value = client.notes || "";
 
-    document.getElementById("vehicleMake").value = "";
-    document.getElementById("vehicleModel").value = "";
-    document.getElementById("vehiclePlate").value = "";
-    document.getElementById("vehicleVin").value = "";
-    document.getElementById("vehicleYear").value = "";
-    document.getElementById("vehicleEngine").value = "";
-    document.getElementById("vehicleMileage").value = "";
+    const clientVehicle =
+        vehicles.find(
+            v => v.client_id === id
+        );
+
+    document.getElementById("vehicleMake").value =
+        clientVehicle?.make || "";
+
+    document.getElementById("vehicleModel").value =
+        clientVehicle?.model || "";
+
+    document.getElementById("vehiclePlate").value =
+        clientVehicle?.plate || "";
+
+    document.getElementById("vehicleVin").value =
+        clientVehicle?.vin || "";
+
+    document.getElementById("vehicleYear").value =
+        clientVehicle?.year || "";
+
+    document.getElementById("vehicleEngine").value =
+        clientVehicle?.engine || "";
+
+    document.getElementById("vehicleMileage").value =
+        clientVehicle?.current_mileage ?? "";
 
     document.getElementById("clientModalBg").style.display = "block";
 }
