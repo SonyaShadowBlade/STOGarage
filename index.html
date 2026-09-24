@@ -558,8 +558,8 @@
     .vehicle-investment-total {
         display: inline-flex;
         align-items: center;
-        gap: 9px;
-        font-size: 21px;
+        gap: 12px;
+        font-size: 22px;
         font-weight: 900;
         color: #dc2626;
         text-transform: uppercase;
@@ -567,8 +567,8 @@
     }
 
     .rusty-bucket {
-        width: 58px;
-        height: 48px;
+        width: 90px;
+        height: 70px;
         object-fit: cover;
         object-position: center;
         border-radius: 7px;
@@ -932,7 +932,7 @@
             <h3>История обслуживания</h3>
             <div id="vehicleInvestmentTotal" class="vehicle-investment-total">
                 <span>Сколько уже вложено в это</span>
-                <img class="rusty-bucket" src="https://commons.wikimedia.org/wiki/Special:Redirect/file/Rusty_can.jpg" alt="Ржавое дырявое ведро" title="Ржавое дырявое ведро">
+                <img class="rusty-bucket" src="https://commons.wikimedia.org/wiki/Special:Redirect/file/Rust_bucket_-_geograph.org.uk_-_7144016.jpg" alt="Большое ржавое дырявое ведро" title="Большое ржавое дырявое ведро">
                 <strong id="vehicleInvestmentAmount">0.00 BYN</strong>
             </div>
         </div>
@@ -2633,12 +2633,18 @@ async function loadServices() {
 
         const addInvestment = row => {
             const currency = allowedCurrency(row.currency) ? row.currency : "BYN";
-            const value = Number(
-                row.total_price !== null && row.total_price !== undefined
-                    ? row.total_price
-                    : (Number(row.quantity || 0) * Number(row.price || 0))
-            );
-            if (Number.isFinite(value)) {
+            const storedTotal = Number(row.total_price);
+            const quantity = Number(row.quantity || 0);
+            const unitPrice = Number(row.price || 0);
+            const calculatedTotal = quantity * unitPrice;
+
+            // Если total_price пустой/нулевой, используем количество × цену.
+            const value =
+                Number.isFinite(storedTotal) && storedTotal > 0
+                    ? storedTotal
+                    : calculatedTotal;
+
+            if (Number.isFinite(value) && value > 0) {
                 investmentTotals[currency] =
                     (investmentTotals[currency] || 0) + value;
             }
