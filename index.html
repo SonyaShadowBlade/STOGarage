@@ -964,6 +964,18 @@
                     📥 Восстановить из копии
                 </button>
 
+                <button class="btn-secondary" onclick="document.getElementById('backupCheckFileInput').click()">
+                    🔍 Проверить копию
+                </button>
+
+                <input
+                    id="backupCheckFileInput"
+                    type="file"
+                    accept=".json,application/json"
+                    style="display:none;"
+                    onchange="checkBackupFromFile(event)"
+                >
+
                 <input
                     id="backupFileInput"
                     type="file"
@@ -6734,6 +6746,106 @@ async function createBackupDownload() {
             button.disabled = false;
             button.textContent = "⬇️ Скачать полную копию";
         }
+    }
+}
+
+function validateBackupObjectDetailed(backup) {
+    const data = validateBackupObject(backup);
+    const errors = [];
+    const warnings = [];
+    const tables = ["clients","vehicles","services","service_items","service_parts"];
+    const ids = {};
+
+    for (const table of tables) {
+        ids[table] = new Set();
+        data[table].forEach((row, index) => {
+            if (!row || typeof row !== "object") {
+                errors.push(table + ": строка №" + (index + 1) + " повреждена.");
+                return;
+            }
+            if (!row.id) {
+                errors.push(table + ": строка №" + (index + 1) + " не содержит id.");
+            } else if (ids[table].has(row.id)) {
+                errors.push(table + ": повторяющийся id " + row.id);
+            } else {
+                ids[table].add(row.id);
+            }
+        });
+    }
+
+    data.vehicles.forEach((row, i) => {
+        if (!row.client_id || !ids.clients.has(row.client_id))
+            errors.push("vehicles: автомобиль №" + (i + 1) + " содержит неизвестный client_id.");
+    });
+    data.services.forEach((row, i) => {
+        if (!row.vehicle_id || !ids.vehicles.has(row.vehicle_id))
+            errors.push("services: обслуживание №" + (i + 1) + " содержит неизвестный vehicle_id.");
+    });
+
+    for (const table of ["service_items","service_parts"]) {
+        data[table].forEach((row, i) => {
+            if (!row.service_id || !ids.services.has(row.service_id))
+                errors.push(table + ": запись №" + (i + 1) + " содержит неизвестный service_id.");
+            for (const field of ["quantity","price","total_price"]) {
+                if (row[field] !== undefined && row[field] !== null && !Number.isFinite(Number(row[field])))
+                    errors.push(table + ": запись №" + (i + 1) + " содержит некорректное поле " + field + ".");
+            }
+            if (row.currency && !["BYN","EUR","USD","RUB"].includes(String(row.currency)))
+                warnings.push(table + ": запись №" + (i + 1) + " содержит валюту " + row.currency + ".");
+        });
+    }
+
+    const counts = backup.counts || {};
+    for (const table of tables) {
+        if (counts[table] !== undefined && Number(counts[table]) !== data[table].length)
+            errors.push("counts." + table + " не совпадает с фактическим количеством записей.");
+    }
+
+    return {
+        data,
+        errors,
+        warnings,
+        totalRows: tables.reduce((sum, table) => sum + data[table].length, 0)
+    };
+}
+
+function showBackupCheckResult(result, fileName) {
+    let message =
+        "Файл: " + fileName + "\n" +
+        "Формат: " + BACKUP_FORMAT_VERSION + "\n\n" +
+        "Клиенты: " + result.data.clients.length + "\n" +
+        "Автомобили: " + result.data.vehicles.length + "\n" +
+        "Обслуживания: " + result.data.services.length + "\n" +
+        "Работы: " + result.data.service_items.length + "\n" +
+        "Запчасти: " + result.data.service_parts.length + "\n" +
+        "Всего строк: " + result.totalRows + "\n\n";
+
+    message += result.errors.length
+        ? "❌ Ошибок: " + result.errors.length + "\n" + result.errors.slice(0, 12).join("\n")
+        : "✅ Структура, ID и связи между таблицами проверены — ошибок не найдено.";
+
+    if (result.warnings.length)
+        message += "\n\n⚠️ Предупреждений: " + result.warnings.length + "\n" + result.warnings.slice(0, 8).join("\n");
+
+    showBackupStatus(message, result.errors.length > 0);
+}
+
+async function checkBackupFromFile(event) {
+    const input = event.target;
+    const file = input && input.files ? input.files[0] : null;
+    if (!file) return;
+
+    try {
+        showBackupStatus("Проверяем резервную копию локально...");
+        const raw = await file.text();
+        const backup = JSON.parse(raw);
+        const result = validateBackupObjectDetailed(backup);
+        showBackupCheckResult(result, file.name);
+    } catch (error) {
+        console.error("Ошибка проверки backup:", error);
+        showBackupStatus("❌ Файл не прошёл проверку: " + error.message, true);
+    } finally {
+        input.value = "";
     }
 }
 
