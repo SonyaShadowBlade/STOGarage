@@ -1461,7 +1461,7 @@ function setStatus(text, error = false) {
 async function api(path, options = {}) {
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     let response;
 
@@ -1483,7 +1483,7 @@ async function api(path, options = {}) {
         clearTimeout(timeoutId);
 
         if (error.name === "AbortError") {
-            throw new Error("Supabase не отвечает более 30 секунд");
+            throw new Error("Supabase не отвечает более 8 секунд");
         }
 
         throw error;
@@ -2598,76 +2598,77 @@ async function loadServices() {
 
     if (!currentVehicle) return;
 
-
     const services =
         await api(
-
             "services?vehicle_id=eq." +
-
-            encodeURIComponent(
-                currentVehicle.id
-            ) +
-
+            encodeURIComponent(currentVehicle.id) +
             "&select=*" +
-
             "&order=service_date.desc," +
             "service_time.desc," +
             "created_at.desc"
-
         );
-
 
     const container =
-        document.getElementById(
-            "servicesList"
-        );
-
+        document.getElementById("servicesList");
 
     if (!services.length) {
-
         container.innerHTML =
-
             `
                 <div class="empty">
                     История обслуживания
                     пока пустая.
                 </div>
             `;
-
         return;
     }
 
+    // Загружаем все работы и запчасти двумя запросами,
+    // а не двумя запросами на каждое обслуживание.
+    const serviceIds = services.map(service => service.id);
+    const idsFilter = serviceIds.join(",");
+
+    const [allItems, allParts] = await Promise.all([
+        api(
+            "service_items?service_id=in.(" +
+            idsFilter +
+            ")&select=*&order=created_at.asc"
+        ),
+        api(
+            "service_parts?service_id=in.(" +
+            idsFilter +
+            ")&select=*&order=created_at.asc"
+        )
+    ]);
+
+    const itemsByService = {};
+    const partsByService = {};
+
+    allItems.forEach(item => {
+        (itemsByService[item.service_id] ||= []).push(item);
+    });
+
+    allParts.forEach(part => {
+        (partsByService[part.service_id] ||= []).push(part);
+    });
 
     const html = [];
     const investmentTotals = {};
 
-    for (
-        const service of services
-    ) {
-        const items =
-            await api(
-                "service_items?service_id=eq." +
-                encodeURIComponent(service.id) +
-                "&select=*" +
-                "&order=created_at.asc"
-            );
-
-        const parts =
-            await api(
-                "service_parts?service_id=eq." +
-                encodeURIComponent(service.id) +
-                "&select=*" +
-                "&order=created_at.asc"
-            );
+    for (const service of services) {
+        const items = itemsByService[service.id] || [];
+        const parts = partsByService[service.id] || [];
 
         const addInvestment = row => {
-            const currency = allowedCurrency(row.currency) ? row.currency : "BYN";
+            const currency =
+                allowedCurrency(row.currency)
+                    ? row.currency
+                    : "BYN";
+
             const storedTotal = Number(row.total_price);
             const quantity = Number(row.quantity || 0);
             const unitPrice = Number(row.price || 0);
             const calculatedTotal = quantity * unitPrice;
 
-            // Если total_price пустой/нулевой, используем количество × цену.
             const value =
                 Number.isFinite(storedTotal) && storedTotal > 0
                     ? storedTotal
@@ -2691,17 +2692,19 @@ async function loadServices() {
         );
     }
 
-
-    container.innerHTML =
-        html.join("");
+    container.innerHTML = html.join("");
 
     const investmentAmount =
         document.getElementById("vehicleInvestmentAmount");
 
     if (investmentAmount) {
         const currencyOrder = ["BYN", "EUR", "USD", "RUB"];
+
         const entries = currencyOrder
-            .filter(currency => Number(investmentTotals[currency] || 0) > 0)
+            .filter(
+                currency =>
+                    Number(investmentTotals[currency] || 0) > 0
+            )
             .map(currency =>
                 Number(investmentTotals[currency]).toFixed(2) +
                 " " +
@@ -2710,10 +2713,11 @@ async function loadServices() {
 
         investmentAmount.textContent =
             entries.length
-                ? entries.map(entry => entry.replace(" Br", " BYN")).join(" + ")
+                ? entries
+                    .map(entry => entry.replace(" Br", " BYN"))
+                    .join(" + ")
                 : "0.00 BYN";
     }
-
 }
 
 
