@@ -74,6 +74,52 @@
         margin-left: auto;
     }
 
+    .auth-password-wrap {
+        position: relative;
+    }
+
+    .auth-password-wrap input {
+        width: 100%;
+        padding-right: 48px;
+        box-sizing: border-box;
+    }
+
+    .auth-password-eye {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 36px;
+        height: 36px;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        font-size: 19px;
+        padding: 0;
+        border-radius: 6px;
+    }
+
+    .auth-password-eye:hover {
+        background: #f3f4f6;
+    }
+
+    .auth-remember {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 12px 0 4px;
+        cursor: pointer;
+        user-select: none;
+        color: #444;
+        font-size: 14px;
+    }
+
+    .auth-remember input {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
     .kick-scene-bg {
         display: none;
         position: fixed;
@@ -756,8 +802,23 @@
 
             <div class="field">
                 <label for="authPassword">Пароль</label>
-                <input id="authPassword" type="password" autocomplete="current-password" required placeholder="Введите пароль">
+                <div class="auth-password-wrap">
+                    <input id="authPassword" type="password" autocomplete="current-password" required placeholder="Введите пароль">
+                    <button
+                        id="authPasswordEye"
+                        class="auth-password-eye"
+                        type="button"
+                        onclick="togglePasswordVisibility('authPassword', this)"
+                        aria-label="Показать пароль"
+                        title="Показать пароль"
+                    >👁️</button>
+                </div>
             </div>
+
+            <label class="auth-remember">
+                <input id="rememberMe" type="checkbox" checked>
+                <span>Запомнить меня</span>
+            </label>
 
             <button id="authLoginButton" class="btn-primary" type="submit">
                 🔑 Войти
@@ -1538,17 +1599,44 @@ let authSession = null;
 
 function getStoredSession() {
     try {
-        const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+        const raw =
+            localStorage.getItem(AUTH_STORAGE_KEY) ||
+            sessionStorage.getItem(AUTH_STORAGE_KEY);
+
         return raw ? JSON.parse(raw) : null;
     } catch (error) {
         localStorage.removeItem(AUTH_STORAGE_KEY);
+        sessionStorage.removeItem(AUTH_STORAGE_KEY);
         return null;
     }
 }
 
-function saveSession(session) {
+function saveSession(session, remember = true) {
     authSession = session;
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    sessionStorage.removeItem(AUTH_STORAGE_KEY);
+
+    if (remember) {
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+    } else {
+        sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+    }
+}
+
+function togglePasswordVisibility(inputId, button) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    const visible = input.type === "text";
+    input.type = visible ? "password" : "text";
+
+    button.textContent = visible ? "👁️" : "🙈";
+    button.setAttribute(
+        "aria-label",
+        visible ? "Показать пароль" : "Скрыть пароль"
+    );
+    button.title = visible ? "Показать пароль" : "Скрыть пароль";
 }
 
 function clearSession() {
@@ -1795,7 +1883,8 @@ async function login(event) {
             })
         });
 
-        saveSession(session);
+        const remember = document.getElementById("rememberMe").checked;
+        saveSession(session, remember);
         document.getElementById("authPassword").value = "";
         showAuth(false);
         await loadData();
@@ -1823,7 +1912,8 @@ async function refreshAuthSession() {
             })
         });
 
-        saveSession(session);
+        const wasRemembered = !!localStorage.getItem(AUTH_STORAGE_KEY);
+        saveSession(session, wasRemembered);
         return true;
     } catch (error) {
         console.warn("Сессию не удалось обновить:", error);
