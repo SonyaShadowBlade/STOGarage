@@ -974,6 +974,13 @@
                 ＋ Добавить работу
             </button>
 
+            <div class="line-summary-row" style="display:flex;gap:8px;margin-top:10px;align-items:center;">
+                <input type="number" id="workSummaryTotal" min="0" step="1"
+                    placeholder="Работы одной суммой" style="flex:1;"
+                    oninput="updateServiceFormTotal()">
+                <select id="workSummaryCurrency" onchange="updateServiceFormTotal()"><option value="EUR">EUR €</option><option value="USD">USD $</option><option value="RUB">RUB ₽</option><option value="BYN" selected>BYN Br</option></select>
+            </div>
+
         </div>
 
 
@@ -993,6 +1000,13 @@
             >
                 ＋ Добавить запчасть
             </button>
+
+            <div class="line-summary-row" style="display:flex;gap:8px;margin-top:10px;align-items:center;">
+                <input type="number" id="partSummaryTotal" min="0" step="1"
+                    placeholder="Запчасти одной суммой" style="flex:1;"
+                    oninput="updateServiceFormTotal()">
+                <select id="partSummaryCurrency" onchange="updateServiceFormTotal()"><option value="EUR">EUR €</option><option value="USD">USD $</option><option value="RUB">RUB ₽</option><option value="BYN" selected>BYN Br</option></select>
+            </div>
 
         </div>
 
@@ -1610,7 +1624,8 @@ async function loadSuggestions() {
 
             if (
                 item.name &&
-                item.name.trim()
+                item.name.trim() &&
+                item.name !== "__SERVICE_WORK_SUMMARY__"
             ) {
 
                 worksSet.add(
@@ -1630,7 +1645,8 @@ async function loadSuggestions() {
 
             if (
                 item.name &&
-                item.name.trim()
+                item.name.trim() &&
+                item.name !== "__SERVICE_PART_SUMMARY__"
             ) {
 
                 partsSet.add(
@@ -2598,6 +2614,13 @@ function renderService(
 
     items.forEach(item => {
 
+        if (item.name === "__SERVICE_WORK_SUMMARY__") {
+            const currency = allowedCurrency(item.currency) ? item.currency : "BYN";
+            const value = Number(item.total_price);
+            if (Number.isFinite(value) && value > 0) totals[currency] = (totals[currency] || 0) + value;
+            return;
+        }
+
         const currency =
             allowedCurrency(
                 item.currency
@@ -2622,19 +2645,22 @@ function renderService(
             +
 
             Number(
-                item.quantity || 0
-            )
-
-            *
-
-            Number(
-                item.price || 0
+                item.total_price != null
+                    ? item.total_price
+                    : Number(item.quantity || 0) * Number(item.price || 0)
             );
 
     });
 
 
     parts.forEach(part => {
+
+        if (part.name === "__SERVICE_PART_SUMMARY__") {
+            const currency = allowedCurrency(part.currency) ? part.currency : "BYN";
+            const value = Number(part.total_price);
+            if (Number.isFinite(value) && value > 0) totals[currency] = (totals[currency] || 0) + value;
+            return;
+        }
 
         const currency =
             allowedCurrency(
@@ -2660,13 +2686,9 @@ function renderService(
             +
 
             Number(
-                part.quantity || 0
-            )
-
-            *
-
-            Number(
-                part.price || 0
+                part.total_price != null
+                    ? part.total_price
+                    : Number(part.quantity || 0) * Number(part.price || 0)
             );
 
     });
@@ -2839,11 +2861,11 @@ function renderService(
 
 
                 ${
-                    items.length
+                    items.filter(item => item.name !== "__SERVICE_WORK_SUMMARY__").length
 
                     ?
 
-                    items
+                    items.filter(item => item.name !== "__SERVICE_WORK_SUMMARY__")
                         .map(item => `
 
                             <div
@@ -2936,11 +2958,11 @@ function renderService(
 
 
                 ${
-                    parts.length
+                    parts.filter(part => part.name !== "__SERVICE_PART_SUMMARY__").length
 
                     ?
 
-                    parts
+                    parts.filter(part => part.name !== "__SERVICE_PART_SUMMARY__")
                         .map(part => `
 
                             <div
@@ -3141,6 +3163,7 @@ function openServiceModal() {
         "partsContainer"
     ).innerHTML = "";
 
+    resetServiceSummaryTotals();
 
     addWorkRow();
 
@@ -3466,10 +3489,10 @@ function addPartRow(
         <button
             type="button"
             class="btn-danger small-button"
+            style="width:34px;min-width:34px;padding:6px 8px;"
             onclick="
-                this
-                .closest('.line-row')
-                .remove()
+                this.closest('.line-row').remove();
+                updateServiceFormTotal()
             "
         >
             ✕
@@ -3533,6 +3556,28 @@ function updateLineTotal(input, manual = false) {
     updateServiceFormTotal();
 }
 
+function getServiceSummaryTotals() {
+    const work = Number(document.getElementById("workSummaryTotal")?.value || 0);
+    const part = Number(document.getElementById("partSummaryTotal")?.value || 0);
+    return {
+        work: Number.isFinite(work) && work > 0 ? work : 0,
+        workCurrency: document.getElementById("workSummaryCurrency")?.value || "BYN",
+        part: Number.isFinite(part) && part > 0 ? part : 0,
+        partCurrency: document.getElementById("partSummaryCurrency")?.value || "BYN"
+    };
+}
+
+function resetServiceSummaryTotals() {
+    const work = document.getElementById("workSummaryTotal");
+    const part = document.getElementById("partSummaryTotal");
+    if (work) work.value = "";
+    if (part) part.value = "";
+    const wc = document.getElementById("workSummaryCurrency");
+    const pc = document.getElementById("partSummaryCurrency");
+    if (wc) wc.value = "BYN";
+    if (pc) pc.value = "BYN";
+}
+
 function updateServiceFormTotal() {
     const target = document.getElementById("serviceFormTotal");
     if (!target) return;
@@ -3560,6 +3605,10 @@ function updateServiceFormTotal() {
             const currency = currencyInput.value || "BYN";
             totals[currency] = (totals[currency] || 0) + total;
         });
+
+    const summary = getServiceSummaryTotals();
+    if (summary.work) totals[summary.workCurrency] = (totals[summary.workCurrency] || 0) + summary.work;
+    if (summary.part) totals[summary.partCurrency] = (totals[summary.partCurrency] || 0) + summary.part;
 
     const entries = Object.entries(totals);
     if (!entries.length) {
@@ -4104,6 +4153,24 @@ async function saveService() {
         }
 
 
+        const summary = getServiceSummaryTotals();
+
+        if (summary.work) {
+            await api("service_items", { method: "POST", body: JSON.stringify({
+                service_id: serviceId, name: "__SERVICE_WORK_SUMMARY__", quantity: 1,
+                price: 0, total_price: summary.work,
+                currency: allowedCurrency(summary.workCurrency) ? summary.workCurrency : "BYN"
+            })});
+        }
+
+        if (summary.part) {
+            await api("service_parts", { method: "POST", body: JSON.stringify({
+                service_id: serviceId, name: "__SERVICE_PART_SUMMARY__", brand: "",
+                quantity: 1, price: 0, total_price: summary.part,
+                currency: allowedCurrency(summary.partCurrency) ? summary.partCurrency : "BYN"
+            })});
+        }
+
         closeServiceModal();
 
 
@@ -4307,7 +4374,17 @@ async function editService(
             Восстанавливаем работы.
         */
 
-        items.forEach(item => {
+        const workSummary = items.find(item => item.name === "__SERVICE_WORK_SUMMARY__");
+        const partSummary = parts.find(part => part.name === "__SERVICE_PART_SUMMARY__");
+        const normalItems = items.filter(item => item.name !== "__SERVICE_WORK_SUMMARY__");
+        const normalParts = parts.filter(part => part.name !== "__SERVICE_PART_SUMMARY__");
+
+        document.getElementById("workSummaryTotal").value = workSummary?.total_price ?? "";
+        document.getElementById("workSummaryCurrency").value = allowedCurrency(workSummary?.currency) ? workSummary.currency : "BYN";
+        document.getElementById("partSummaryTotal").value = partSummary?.total_price ?? "";
+        document.getElementById("partSummaryCurrency").value = allowedCurrency(partSummary?.currency) ? partSummary.currency : "BYN";
+
+        normalItems.forEach(item => {
 
             addWorkRow(
 
@@ -4344,7 +4421,7 @@ async function editService(
             Восстанавливаем запчасти.
         */
 
-        parts.forEach(part => {
+        normalParts.forEach(part => {
 
             addPartRow(
 
@@ -4732,6 +4809,24 @@ async function updateExistingService(
 
         }
 
+
+        const summary = getServiceSummaryTotals();
+
+        if (summary.work) {
+            await api("service_items", { method: "POST", body: JSON.stringify({
+                service_id: serviceId, name: "__SERVICE_WORK_SUMMARY__", quantity: 1,
+                price: 0, total_price: summary.work,
+                currency: allowedCurrency(summary.workCurrency) ? summary.workCurrency : "BYN"
+            })});
+        }
+
+        if (summary.part) {
+            await api("service_parts", { method: "POST", body: JSON.stringify({
+                service_id: serviceId, name: "__SERVICE_PART_SUMMARY__", brand: "",
+                quantity: 1, price: 0, total_price: summary.part,
+                currency: allowedCurrency(summary.partCurrency) ? summary.partCurrency : "BYN"
+            })});
+        }
 
         /*
             6. Выходим из режима
