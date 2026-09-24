@@ -6729,12 +6729,37 @@ async function createBackupDownload() {
             "application/json"
         );
 
-        showBackupStatus(
-            "Готово. Сохранено: " +
-            backup.counts.clients + " клиентов, " +
-            backup.counts.vehicles + " автомобилей, " +
-            backup.counts.services + " обслуживаний."
-        );
+        // Проверяем именно тот объект, который только что был сформирован
+        // и сохранён в файл. Никаких сетевых запросов для проверки не требуется.
+        const verification = validateBackupObjectDetailed(backup);
+
+        if (verification.errors.length) {
+            showBackupStatus(
+                "⚠️ Копия скачана, но встроенная проверка нашла ошибки:\n\n" +
+                verification.errors.slice(0, 12).join("\n"),
+                true
+            );
+        } else if (verification.warnings.length) {
+            showBackupStatus(
+                "✅ Копия скачана и проверена. Ошибок нет.\n\n" +
+                "Сохранено: " +
+                backup.counts.clients + " клиентов, " +
+                backup.counts.vehicles + " автомобилей, " +
+                backup.counts.services + " обслуживаний.\n\n" +
+                "⚠️ Предупреждений: " + verification.warnings.length,
+                false
+            );
+        } else {
+            showBackupStatus(
+                "✅ Копия скачана и автоматически проверена — ошибок не найдено.\n\n" +
+                "Сохранено: " +
+                backup.counts.clients + " клиентов, " +
+                backup.counts.vehicles + " автомобилей, " +
+                backup.counts.services + " обслуживаний.\n" +
+                "Всего строк: " + verification.totalRows + ".",
+                false
+            );
+        }
     } catch (error) {
         console.error("Ошибка создания backup:", error);
         showBackupStatus(
