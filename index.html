@@ -526,6 +526,50 @@
         border-top: 1px solid #eee;
         font-weight: bold;
     }
+    
+    .service-history-heading {
+        margin-top: 25px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        flex-wrap: wrap;
+    }
+
+    .service-history-heading h3 {
+        margin: 0;
+    }
+
+    .vehicle-investment-total {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 15px;
+        font-weight: 700;
+        color: #374151;
+        white-space: nowrap;
+    }
+
+    .rusty-bucket {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 34px;
+        line-height: 1;
+        transform: rotate(-7deg);
+        filter: saturate(.75);
+    }
+
+    .vehicle-investment-total strong {
+        font-size: 16px;
+        color: #111827;
+    }
+
+    @media (max-width: 800px) {
+        .vehicle-investment-total {
+            white-space: normal;
+        }
+    }
 
     .empty {
         text-align: center;
@@ -861,9 +905,14 @@
 
         </div>
 
-        <h3 style="margin-top:25px;">
-            История обслуживания
-        </h3>
+        <div class="service-history-heading">
+            <h3>История обслуживания</h3>
+            <div id="vehicleInvestmentTotal" class="vehicle-investment-total">
+                <span>Сколько уже вложено в это</span>
+                <span class="rusty-bucket" aria-label="ржавое дырявое ведро">🪣</span>
+                <strong id="vehicleInvestmentAmount">0.00 BYN</strong>
+            </div>
+        </div>
 
         <div id="servicesList"></div>
 
@@ -2538,43 +2587,26 @@ async function loadServices() {
 
 
     const html = [];
-
+    const investmentTotals = {};
 
     for (
         const service of services
     ) {
-
-        const items =
-            await api(
-
-                "service_items?service_id=eq." +
-
-                encodeURIComponent(
-                    service.id
-                ) +
-
-                "&select=*" +
-
-                "&order=created_at.asc"
-
+        const addInvestment = row => {
+            const currency = allowedCurrency(row.currency) ? row.currency : "BYN";
+            const value = Number(
+                row.total_price !== null && row.total_price !== undefined
+                    ? row.total_price
+                    : (Number(row.quantity || 0) * Number(row.price || 0))
             );
+            if (Number.isFinite(value)) {
+                investmentTotals[currency] =
+                    (investmentTotals[currency] || 0) + value;
+            }
+        };
 
-
-        const parts =
-            await api(
-
-                "service_parts?service_id=eq." +
-
-                encodeURIComponent(
-                    service.id
-                ) +
-
-                "&select=*" +
-
-                "&order=created_at.asc"
-
-            );
-
+        items.forEach(addInvestment);
+        parts.forEach(addInvestment);
 
         html.push(
 
@@ -2595,6 +2627,23 @@ async function loadServices() {
 
     container.innerHTML =
         html.join("");
+
+    const investmentAmount =
+        document.getElementById("vehicleInvestmentAmount");
+
+    if (investmentAmount) {
+        const currencyOrder = ["BYN", "EUR", "USD", "RUB"];
+        const entries = currencyOrder
+            .filter(currency => Number(investmentTotals[currency] || 0) > 0)
+            .map(currency =>
+                Number(investmentTotals[currency]).toFixed(2) +
+                " " +
+                currencySymbol(currency)
+            );
+
+        investmentAmount.textContent =
+            entries.length ? entries.join(" + ") : "0.00 BYN";
+    }
 
 }
 
