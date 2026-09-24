@@ -2071,6 +2071,9 @@ async function saveClient() {
             notes: document.getElementById("clientNotes").value.trim()
         };
 
+        // VIN'ы собираем до обеих веток: и при создании, и при редактировании.
+        const vehicleVinValue = getVehicleVins().join("\n");
+
         if (editingClientId) {
             await api(
                 "clients?id=eq." + encodeURIComponent(editingClientId),
@@ -2142,8 +2145,6 @@ async function saveClient() {
             return;
         }
 
-        const vehicleVinValue = getVehicleVins().join("\n");
-
         const client = await api(
             "clients",
             {
@@ -2163,7 +2164,7 @@ async function saveClient() {
             make ||
             model ||
             document.getElementById("vehiclePlate").value.trim() ||
-            document.getElementById("vehicleVin").value.trim()
+            vehicleVinValue
         ) {
             await api(
                 "vehicles",
