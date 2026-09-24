@@ -3273,7 +3273,7 @@ function addWorkRow(
             step="1"
             placeholder="Цена за 1 шт."
             value="${escapeAttr(price)}"
-            oninput="updateLineTotal(this)"
+            oninput="updateLineTotal(this); updateServiceFormTotal()"
         >
 
         <input
@@ -3612,6 +3612,7 @@ function changeQuantity(
         );
 
     updateLineTotal(input);
+    updateServiceFormTotal();
 
 }
 
