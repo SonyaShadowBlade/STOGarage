@@ -2085,6 +2085,60 @@ async function saveClient() {
                 }
             );
 
+            const clientVehicle =
+                vehicles.find(
+                    v => v.client_id === editingClientId
+                );
+
+            const vehicleData = {
+                client_id: editingClientId,
+                plate: document.getElementById("vehiclePlate").value.trim(),
+                vin: document.getElementById("vehicleVin").value.trim(),
+                make: document.getElementById("vehicleMake").value.trim(),
+                model: document.getElementById("vehicleModel").value.trim(),
+                year: parseInteger(
+                    document.getElementById("vehicleYear").value
+                ),
+                engine: document.getElementById("vehicleEngine").value.trim(),
+                current_mileage: parseInteger(
+                    document.getElementById("vehicleMileage").value
+                )
+            };
+
+            const hasVehicleData =
+                vehicleData.make ||
+                vehicleData.model ||
+                vehicleData.plate ||
+                vehicleData.vin ||
+                vehicleData.year !== null ||
+                vehicleData.engine ||
+                vehicleData.current_mileage !== null;
+
+            if (clientVehicle) {
+                await api(
+                    "vehicles?id=eq." +
+                    encodeURIComponent(clientVehicle.id),
+                    {
+                        method: "PATCH",
+                        headers: {
+                            "Prefer": "return=representation"
+                        },
+                        body: JSON.stringify(vehicleData)
+                    }
+                );
+            } else if (hasVehicleData) {
+                await api(
+                    "vehicles",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Prefer": "return=representation"
+                        },
+                        body: JSON.stringify(vehicleData)
+                    }
+                );
+            }
+
             closeClientModal();
             await loadData();
             return;
