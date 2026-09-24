@@ -1602,6 +1602,18 @@ function formatMoney(
 }
 
 
+function currencySymbol(currency) {
+    const symbols = {
+        EUR: "€",
+        USD: "$",
+        RUB: "₽",
+        BYN: "Br"
+    };
+
+    return symbols[currency] || currency;
+}
+
+
 function allowedCurrency(
     currency
 ) {
