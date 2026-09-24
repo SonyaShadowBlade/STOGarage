@@ -914,6 +914,10 @@
         <button class="btn-secondary" onclick="sunnyTest()">
             ☀️ Солнце
         </button>
+
+        <button class="btn-secondary" onclick="openBackupModal()">
+            💾 Резервная копия
+        </button>
     </div>
 
     <div id="clientsList" class="clients-list" style="margin-top:20px;"></div>
@@ -923,6 +927,52 @@
 
 
     <div id="kickSceneBg" class="kick-scene-bg" aria-hidden="true">
+    <div id="backupBg" class="version-check-bg" style="display:none;">
+        <div class="version-check-modal" style="max-width:760px;text-align:left;max-height:90vh;overflow-y:auto;">
+            <div class="version-check-title">💾 Резервная копия СТО</div>
+
+            <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:14px;">
+                <strong>Что сохраняется:</strong>
+                <div style="margin-top:8px;color:#555;line-height:1.55;">
+                    Клиенты, автомобили, обслуживания, работы, запчасти и все идентификаторы/связи.
+                    Копия создаётся прямо из облачной базы, поэтому не зависит от того,
+                    какое устройство сейчас открыто.
+                </div>
+            </div>
+
+            <div id="backupStatus" class="auth-message" style="display:none;"></div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button class="btn-primary" id="backupDownloadButton" onclick="createBackupDownload()">
+                    ⬇️ Скачать полную копию
+                </button>
+
+                <button class="btn-secondary" onclick="document.getElementById('backupFileInput').click()">
+                    📥 Восстановить из копии
+                </button>
+
+                <input
+                    id="backupFileInput"
+                    type="file"
+                    accept=".json,application/json"
+                    style="display:none;"
+                    onchange="restoreBackupFromFile(event)"
+                >
+            </div>
+
+            <div style="margin-top:16px;font-size:13px;color:#666;line-height:1.55;">
+                <strong>Важно:</strong> восстановление заменяет текущие данные выбранной резервной копией.
+                Перед восстановлением программа попросит подтвердить удаление текущей базы.
+                Не закрывай страницу во время восстановления.
+            </div>
+
+            <div style="margin-top:18px;text-align:right;">
+                <button class="btn-secondary" onclick="closeBackupModal()">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+
         <div class="kick-scene">
             <div class="kick-stage">
                 <div class="kick-swear">«БЛЯТЬ, ГДЕ ОБНОВЛЕНИЕ?!»</div>
@@ -6515,6 +6565,339 @@ function escapeAttr(
 
 function sunnyTest() {
     alert("☀️ Солнце появилось! Обновление без смены версии работает.");
+}
+
+const BACKUP_FORMAT_VERSION = "1.0";
+
+function openBackupModal() {
+    const bg = document.getElementById("backupBg");
+    if (bg) {
+        bg.style.display = "flex";
+        showBackupStatus("", false);
+    }
+}
+
+function closeBackupModal() {
+    const bg = document.getElementById("backupBg");
+    if (bg) bg.style.display = "none";
+
+    const input = document.getElementById("backupFileInput");
+    if (input) input.value = "";
+}
+
+function showBackupStatus(message, error = false) {
+    const el = document.getElementById("backupStatus");
+    if (!el) return;
+
+    if (!message) {
+        el.style.display = "none";
+        el.textContent = "";
+        el.style.background = "";
+        el.style.color = "";
+        return;
+    }
+
+    el.style.display = "block";
+    el.textContent = message;
+    el.style.background = error ? "#fee2e2" : "#ecfdf5";
+    el.style.color = error ? "#991b1b" : "#166534";
+}
+
+function backupFileName() {
+    const now = new Date();
+    const stamp =
+        now.getFullYear() + "-" +
+        String(now.getMonth() + 1).padStart(2, "0") + "-" +
+        String(now.getDate()).padStart(2, "0") + "_" +
+        String(now.getHours()).padStart(2, "0") + "-" +
+        String(now.getMinutes()).padStart(2, "0") + "-" +
+        String(now.getSeconds()).padStart(2, "0");
+
+    return "STO_FULL_BACKUP_" + stamp + ".json";
+}
+
+function downloadTextFile(content, fileName, type = "application/json") {
+    const blob = new Blob([content], { type: type + ";charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function fetchBackupTable(table) {
+    return await api(
+        table + "?select=*&order=created_at.asc"
+    );
+}
+
+async function createBackupObject() {
+    if (!authSession || !authSession.access_token) {
+        throw new Error("Сессия авторизации отсутствует.");
+    }
+
+    showBackupStatus("Собираем данные из облачной базы...");
+
+    const [
+        backupClients,
+        backupVehicles,
+        backupServices,
+        backupItems,
+        backupParts
+    ] = await Promise.all([
+        fetchBackupTable("clients"),
+        fetchBackupTable("vehicles"),
+        fetchBackupTable("services"),
+        fetchBackupTable("service_items"),
+        fetchBackupTable("service_parts")
+    ]);
+
+    return {
+        backup_format: BACKUP_FORMAT_VERSION,
+        backup_created_at: new Date().toISOString(),
+        app_version: APP_VERSION,
+        project: {
+            supabase_url: SUPABASE_URL,
+            tables: [
+                "clients",
+                "vehicles",
+                "services",
+                "service_items",
+                "service_parts"
+            ],
+            realtime_tables: [
+                "clients",
+                "vehicles",
+                "services",
+                "service_items",
+                "service_parts"
+            ]
+        },
+        restore_notes: [
+            "clients → vehicles → services → service_items/service_parts",
+            "IDs are preserved.",
+            "This backup contains application data, not Supabase Auth passwords or API secrets.",
+            "Realtime and RLS configuration are documented separately in the application source."
+        ],
+        data: {
+            clients: backupClients,
+            vehicles: backupVehicles,
+            services: backupServices,
+            service_items: backupItems,
+            service_parts: backupParts
+        },
+        counts: {
+            clients: backupClients.length,
+            vehicles: backupVehicles.length,
+            services: backupServices.length,
+            service_items: backupItems.length,
+            service_parts: backupParts.length
+        }
+    };
+}
+
+async function createBackupDownload() {
+    const button = document.getElementById("backupDownloadButton");
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = "⏳ Создаём копию...";
+    }
+
+    try {
+        const backup = await createBackupObject();
+        const json = JSON.stringify(backup, null, 2);
+
+        downloadTextFile(
+            json,
+            backupFileName(),
+            "application/json"
+        );
+
+        showBackupStatus(
+            "Готово. Сохранено: " +
+            backup.counts.clients + " клиентов, " +
+            backup.counts.vehicles + " автомобилей, " +
+            backup.counts.services + " обслуживаний."
+        );
+    } catch (error) {
+        console.error("Ошибка создания backup:", error);
+        showBackupStatus(
+            "Не удалось создать резервную копию: " + error.message,
+            true
+        );
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.textContent = "⬇️ Скачать полную копию";
+        }
+    }
+}
+
+function validateBackupObject(backup) {
+    if (!backup || typeof backup !== "object") {
+        throw new Error("Файл не является корректной резервной копией.");
+    }
+
+    if (backup.backup_format !== BACKUP_FORMAT_VERSION) {
+        throw new Error(
+            "Неподдерживаемый формат резервной копии: " +
+            String(backup.backup_format || "не указан")
+        );
+    }
+
+    const data = backup.data;
+
+    if (!data || typeof data !== "object") {
+        throw new Error("В копии отсутствует раздел data.");
+    }
+
+    for (const table of [
+        "clients",
+        "vehicles",
+        "services",
+        "service_items",
+        "service_parts"
+    ]) {
+        if (!Array.isArray(data[table])) {
+            throw new Error("В копии отсутствует таблица " + table + ".");
+        }
+    }
+
+    return data;
+}
+
+async function replaceTableData(table, rows) {
+    if (!rows.length) return;
+
+    const chunkSize = 100;
+
+    for (let i = 0; i < rows.length; i += chunkSize) {
+        const chunk = rows.slice(i, i + chunkSize);
+
+        await api(
+            table + "?on_conflict=id",
+            {
+                method: "POST",
+                headers: {
+                    "Prefer": "resolution=merge-duplicates,return=minimal"
+                },
+                body: JSON.stringify(chunk)
+            }
+        );
+    }
+}
+
+async function deleteAllRows(table) {
+    await api(
+        table + "?id=not.is.null",
+        {
+            method: "DELETE",
+            headers: {
+                "Prefer": "return=minimal"
+            }
+        }
+    );
+}
+
+async function restoreBackupData(data) {
+    /*
+        Удаляем снизу вверх, чтобы не нарушать внешние ключи,
+        затем восстанавливаем сверху вниз.
+    */
+    showBackupStatus("Удаляем текущие данные...");
+
+    await deleteAllRows("service_parts");
+    await deleteAllRows("service_items");
+    await deleteAllRows("services");
+    await deleteAllRows("vehicles");
+    await deleteAllRows("clients");
+
+    showBackupStatus("Восстанавливаем клиентов...");
+    await replaceTableData("clients", data.clients);
+
+    showBackupStatus("Восстанавливаем автомобили...");
+    await replaceTableData("vehicles", data.vehicles);
+
+    showBackupStatus("Восстанавливаем обслуживания...");
+    await replaceTableData("services", data.services);
+
+    showBackupStatus("Восстанавливаем работы...");
+    await replaceTableData("service_items", data.service_items);
+
+    showBackupStatus("Восстанавливаем запчасти...");
+    await replaceTableData("service_parts", data.service_parts);
+
+    showBackupStatus("Проверяем восстановленную базу...");
+    await loadData();
+
+    return {
+        clients: data.clients.length,
+        vehicles: data.vehicles.length,
+        services: data.services.length,
+        service_items: data.service_items.length,
+        service_parts: data.service_parts.length
+    };
+}
+
+async function restoreBackupFromFile(event) {
+    const input = event.target;
+    const file = input && input.files ? input.files[0] : null;
+
+    if (!file) return;
+
+    try {
+        const raw = await file.text();
+        const backup = JSON.parse(raw);
+        const data = validateBackupObject(backup);
+
+        const totalRows =
+            data.clients.length +
+            data.vehicles.length +
+            data.services.length +
+            data.service_items.length +
+            data.service_parts.length;
+
+        const answer = prompt(
+            "ВНИМАНИЕ! Восстановление полностью заменит текущие данные СТО.\n\n" +
+            "Будет восстановлено строк: " + totalRows + ".\n\n" +
+            "Для подтверждения напишите: ВОССТАНОВИТЬ"
+        );
+
+        if (answer !== "ВОССТАНОВИТЬ") {
+            showBackupStatus("Восстановление отменено.");
+            return;
+        }
+
+        showBackupStatus("Начинаем восстановление...");
+
+        const result = await restoreBackupData(data);
+
+        showBackupStatus(
+            "Восстановление завершено: " +
+            result.clients + " клиентов, " +
+            result.vehicles + " автомобилей, " +
+            result.services + " обслуживаний."
+        );
+
+        setStatus(
+            "База восстановлена из резервной копии. " +
+            "Клиентов: " + result.clients
+        );
+    } catch (error) {
+        console.error("Ошибка восстановления:", error);
+        showBackupStatus(
+            "Ошибка восстановления: " + error.message,
+            true
+        );
+    } finally {
+        input.value = "";
+    }
 }
 
 function kickEngineer() {
