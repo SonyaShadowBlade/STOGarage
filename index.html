@@ -473,14 +473,14 @@
 
     .line-row {
         display: grid;
-        grid-template-columns: minmax(220px, 1fr) 125px 110px 90px auto;
+        grid-template-columns: minmax(200px, 1fr) 125px 110px 120px 90px auto;
         gap: 8px;
         align-items: center;
         margin-bottom: 8px;
     }
 
     .line-row.parts {
-        grid-template-columns: minmax(180px, 1fr) 150px 125px 110px 90px auto;
+        grid-template-columns: minmax(180px, 1fr) 150px 110px 120px 90px auto;
     }
 
     .quantity-control {
@@ -3178,6 +3178,7 @@ function addWorkRow(
     name = "",
     quantity = 1,
     price = "",
+    totalPrice = "",
     currency = "EUR"
 ) {
 
@@ -3236,7 +3237,7 @@ function addWorkRow(
                 type="number"
                 class="work-quantity"
                 min="0.01"
-                step="0.01"
+                step="1"
                 value="${quantity}"
             >
 
@@ -3258,11 +3259,20 @@ function addWorkRow(
             type="number"
             class="work-price"
             min="0"
-            step="0.01"
-            placeholder="Цена"
-            value="${escapeAttr(
-                price
-            )}"
+            step="1"
+            placeholder="Цена за 1 шт."
+            value="${escapeAttr(price)}"
+            oninput="updateLineTotal(this)"
+        >
+
+        <input
+            type="number"
+            class="work-total"
+            min="0"
+            step="1"
+            placeholder="Общая стоимость"
+            value="${escapeAttr(totalPrice !== "" && totalPrice !== null ? totalPrice : (price !== "" && quantity ? Number(price) * Number(quantity) : ""))}"
+            oninput="updateLineTotal(this, true)"
         >
 
 
@@ -3319,6 +3329,7 @@ function addPartRow(
     brand = "",
     quantity = 1,
     price = "",
+    totalPrice = "",
     currency = "EUR"
 ) {
 
@@ -3387,7 +3398,7 @@ function addPartRow(
                 type="number"
                 class="part-quantity"
                 min="0.01"
-                step="0.01"
+                step="1"
                 value="${quantity}"
             >
 
@@ -3409,11 +3420,20 @@ function addPartRow(
             type="number"
             class="part-price"
             min="0"
-            step="0.01"
-            placeholder="Цена"
-            value="${escapeAttr(
-                price
-            )}"
+            step="1"
+            placeholder="Цена за 1 шт."
+            value="${escapeAttr(price)}"
+            oninput="updateLineTotal(this)"
+        >
+
+        <input
+            type="number"
+            class="part-total"
+            min="0"
+            step="1"
+            placeholder="Общая стоимость"
+            value="${escapeAttr(totalPrice !== "" && totalPrice !== null ? totalPrice : (price !== "" && quantity ? Number(price) * Number(quantity) : ""))}"
+            oninput="updateLineTotal(this, true)"
         >
 
 
@@ -3462,6 +3482,35 @@ function addPartRow(
 
 
 /* =====================================================
+   ОБЩАЯ СТОИМОСТЬ
+===================================================== */
+
+function updateLineTotal(input, manual = false) {
+    const row = input.closest(".line-row");
+    if (!row) return;
+    const isPart = row.classList.contains("parts");
+    const priceInput = row.querySelector(isPart ? ".part-price" : ".work-price");
+    const quantityInput = row.querySelector(isPart ? ".part-quantity" : ".work-quantity");
+    const totalInput = row.querySelector(isPart ? ".part-total" : ".work-total");
+    if (!priceInput || !quantityInput || !totalInput) return;
+    const priceText = priceInput.value.trim();
+    const quantity = Number(quantityInput.value || 0);
+    if (manual && priceText === "") {
+        totalInput.readOnly = false;
+        return;
+    }
+    if (priceText !== "" && Number.isFinite(quantity)) {
+        const price = Number(priceText);
+        if (Number.isFinite(price) && price >= 0) {
+            totalInput.value = (price * quantity).toFixed(2);
+            totalInput.readOnly = true;
+            return;
+        }
+    }
+    totalInput.readOnly = false;
+}
+
+/* =====================================================
    КОЛИЧЕСТВО
 ===================================================== */
 
@@ -3497,6 +3546,8 @@ function changeQuantity(
         Number(
             value.toFixed(2)
         );
+
+    updateLineTotal(input);
 
 }
 
@@ -3815,6 +3866,9 @@ async function saveService() {
                 );
 
 
+            const totalInput = row.querySelector(".work-total");
+            const totalPrice = totalInput && totalInput.value.trim() !== "" ? Number(totalInput.value) : null;
+
             const currency =
                 row
                     .querySelector(
@@ -3847,6 +3901,11 @@ async function saveService() {
                                 price >= 0
                                 ? price
                                 : 0,
+
+                            total_price:
+                                Number.isFinite(totalPrice) && totalPrice >= 0
+                                ? totalPrice
+                                : null,
 
                             currency:
                                 allowedCurrency(
@@ -3921,6 +3980,9 @@ async function saveService() {
                 );
 
 
+            const totalInput = row.querySelector(".part-total");
+            const totalPrice = totalInput && totalInput.value.trim() !== "" ? Number(totalInput.value) : null;
+
             const currency =
                 row
                     .querySelector(
@@ -3955,6 +4017,11 @@ async function saveService() {
                                 price >= 0
                                 ? price
                                 : 0,
+
+                            total_price:
+                                Number.isFinite(totalPrice) && totalPrice >= 0
+                                ? totalPrice
+                                : null,
 
                             currency:
                                 allowedCurrency(
@@ -4188,6 +4255,9 @@ async function editService(
                 item.price ??
                     "",
 
+                item.total_price ??
+                    "",
+
                 allowedCurrency(
                     item.currency
                 )
@@ -4223,6 +4293,9 @@ async function editService(
                     1,
 
                 part.price ??
+                    "",
+
+                part.total_price ??
                     "",
 
                 allowedCurrency(
@@ -4420,6 +4493,9 @@ async function updateExistingService(
                 );
 
 
+            const totalInput = row.querySelector(".work-total");
+            const totalPrice = totalInput && totalInput.value.trim() !== "" ? Number(totalInput.value) : null;
+
             const currency =
                 row
                     .querySelector(
@@ -4452,6 +4528,11 @@ async function updateExistingService(
                                 price >= 0
                                 ? price
                                 : 0,
+
+                            total_price:
+                                Number.isFinite(totalPrice) && totalPrice >= 0
+                                ? totalPrice
+                                : null,
 
                             currency:
                                 allowedCurrency(
@@ -4528,6 +4609,9 @@ async function updateExistingService(
                 );
 
 
+            const totalInput = row.querySelector(".part-total");
+            const totalPrice = totalInput && totalInput.value.trim() !== "" ? Number(totalInput.value) : null;
+
             const currency =
                 row
                     .querySelector(
@@ -4562,6 +4646,11 @@ async function updateExistingService(
                                 price >= 0
                                 ? price
                                 : 0,
+
+                            total_price:
+                                Number.isFinite(totalPrice) && totalPrice >= 0
+                                ? totalPrice
+                                : null,
 
                             currency:
                                 allowedCurrency(
@@ -4758,6 +4847,16 @@ function chooseCurrency(
 
 }
 
+function quickLineTotalUpdate() {
+    const price=document.getElementById("quickLinePrice");
+    const qty=document.getElementById("quickLineQuantity");
+    const total=document.getElementById("quickLineTotal");
+    if(!price||!qty||!total)return;
+    if(price.value.trim()===""){total.readOnly=false;return;}
+    const p=Number(price.value),q=Number(qty.value||0);
+    if(Number.isFinite(p)&&Number.isFinite(q)){total.value=(p*q).toFixed(2);total.readOnly=true;}
+}
+
 function openQuickLineDialog(
     type
 ) {
@@ -4817,7 +4916,7 @@ function openQuickLineDialog(
                             id="quickLineQuantity"
                             type="number"
                             min="0.01"
-                            step="0.01"
+                            step="1"
                             value="1"
                         >
                     </div>
@@ -4828,9 +4927,14 @@ function openQuickLineDialog(
                             id="quickLinePrice"
                             type="number"
                             min="0"
-                            step="0.01"
+                            step="1"
                             value="0"
                         >
+                    </div>
+
+                    <div class="field">
+                        <label>Общая стоимость</label>
+                        <input id="quickLineTotal" type="number" min="0" step="1" placeholder="Итого">
                     </div>
 
                     <div class="field">
@@ -4955,6 +5059,8 @@ function openQuickLineDialog(
                             )
                             .value;
 
+                    const totalValue=Number(dialog.querySelector("#quickLineTotal").value||0);
+
                     const result = {
 
                         name: name,
@@ -4968,6 +5074,11 @@ function openQuickLineDialog(
                             price >= 0
                             ? price
                             : 0,
+
+                        totalPrice:
+                            Number.isFinite(totalValue) && totalValue >= 0
+                            ? totalValue
+                            : null,
 
                         currency:
                             allowedCurrency(
@@ -5029,6 +5140,11 @@ function openQuickLineDialog(
 
         dialog.showModal();
 
+        const q=dialog.querySelector("#quickLineQuantity");
+        const p=dialog.querySelector("#quickLinePrice");
+        if(q)q.addEventListener("input",quickLineTotalUpdate);
+        if(p)p.addEventListener("input",quickLineTotalUpdate);
+        quickLineTotalUpdate();
         nameInput.focus();
 
     });
@@ -5078,6 +5194,9 @@ async function addWorkToService(
 
                         price:
                             data.price,
+
+                        total_price:
+                            data.totalPrice,
 
                         currency:
                             data.currency
@@ -5147,6 +5266,9 @@ async function addPartToService(
 
                         price:
                             data.price,
+
+                        total_price:
+                            data.totalPrice,
 
                         currency:
                             data.currency
