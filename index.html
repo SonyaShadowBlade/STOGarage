@@ -551,13 +551,15 @@
     }
 
     .rusty-bucket {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 34px;
-        line-height: 1;
-        transform: rotate(-7deg);
-        filter: saturate(.75);
+        width: 52px;
+        height: 42px;
+        object-fit: cover;
+        object-position: center;
+        border-radius: 7px;
+        border: 1px solid #9ca3af;
+        transform: rotate(-5deg);
+        filter: saturate(.8);
+        box-shadow: 0 2px 5px rgba(0,0,0,.18);
     }
 
     .vehicle-investment-total strong {
@@ -909,7 +911,7 @@
             <h3>История обслуживания</h3>
             <div id="vehicleInvestmentTotal" class="vehicle-investment-total">
                 <span>Сколько уже вложено в это</span>
-                <span class="rusty-bucket" aria-label="ржавое дырявое ведро">🪣</span>
+                <img class="rusty-bucket" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Rusty_can.jpg/320px-Rusty_can.jpg" alt="Ржавое дырявое ведро" title="Фото: Ole Husby, Wikimedia Commons (CC BY-SA 2.0)">
                 <strong id="vehicleInvestmentAmount">0.00 BYN</strong>
             </div>
         </div>
