@@ -1597,6 +1597,7 @@ const SUPABASE_KEY =
 const AUTH_STORAGE_KEY = "sto_supabase_session";
 
 let authSession = null;
+let realtimeClient = null;
 let realtimeChannel = null;
 let realtimeReloadTimer = null;
 
@@ -1945,22 +1946,32 @@ async function startRealtimeSync() {
     stopRealtimeSync();
 
     try {
-        const realtimeClient = window.supabase.createClient(
-            SUPABASE_URL,
-            SUPABASE_KEY,
-            {
-                auth: {
-                    persistSession: false,
-                    autoRefreshToken: false
-                },
-                realtime: {
-                    params: {
-                        eventsPerSecond: 10
+        // Один постоянный Realtime-клиент на вкладку.
+        // Текущий access_token берётся из нашей сессии на каждом подключении/heartbeat.
+        if (!realtimeClient) {
+            realtimeClient = window.supabase.createClient(
+                SUPABASE_URL,
+                SUPABASE_KEY,
+                {
+                    accessToken: async () =>
+                        authSession && authSession.access_token
+                            ? authSession.access_token
+                            : null,
+                    auth: {
+                        persistSession: false,
+                        autoRefreshToken: false
+                    },
+                    realtime: {
+                        params: {
+                            eventsPerSecond: 10
+                        },
+                        log_level: "info"
                     }
                 }
-            }
-        );
+            );
+        }
 
+        // Перед подпиской явно передаём актуальный JWT.
         realtimeClient.realtime.setAuth(authSession.access_token);
 
         realtimeChannel = realtimeClient
@@ -2011,14 +2022,17 @@ async function startRealtimeSync() {
                 scheduleRealtimeReload
             );
 
-        realtimeChannel.subscribe((status) => {
-            console.log("СТО Realtime:", status);
+        realtimeChannel.subscribe((status, error) => {
+            console.log("СТО Realtime:", status, error || "");
 
             if (status === "SUBSCRIBED") {
                 setStatus("Подключено к облачной базе. Синхронизация в реальном времени включена.");
             }
 
             if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+                console.error("СТО Realtime ошибка подписки:", error || status);
+                setStatus("Realtime: ошибка синхронизации. Переподключаемся...", true);
+
                 setTimeout(() => {
                     if (authSession && authSession.access_token) {
                         startRealtimeSync();
@@ -2032,9 +2046,9 @@ async function startRealtimeSync() {
 }
 
 function stopRealtimeSync() {
-    if (realtimeChannel && window.supabase) {
+    if (realtimeChannel && realtimeClient) {
         try {
-            realtimeChannel.unsubscribe();
+            realtimeClient.removeChannel(realtimeChannel);
         } catch (error) {
             console.warn("Ошибка отключения Realtime:", error);
         }
