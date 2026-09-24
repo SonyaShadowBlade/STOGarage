@@ -6578,6 +6578,109 @@ function sunnyTest() {
 }
 
 const BACKUP_FORMAT_VERSION = "1.0";
+const AUTO_BACKUP_RETENTION_DAYS = 30;
+const AUTO_BACKUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const AUTO_BACKUP_TABLE = "automatic_backups";
+
+function getAutoBackupDay(date = new Date()) {
+    return date.toISOString().slice(0, 10);
+}
+
+async function getLatestAutomaticBackup() {
+    const rows = await api(
+        AUTO_BACKUP_TABLE +
+        "?select=id,backup_day,created_at,verified,counts&order=created_at.desc&limit=1"
+    );
+    return Array.isArray(rows) && rows.length ? rows[0] : null;
+}
+
+async function saveAutomaticBackup(backup, verification) {
+    const payload = {
+        backup_day: getAutoBackupDay(),
+        created_at: backup.backup_created_at,
+        app_version: backup.app_version,
+        backup_format: backup.backup_format,
+        verified: verification.errors.length === 0,
+        counts: backup.counts,
+        backup_data: backup
+    };
+
+    await api(AUTO_BACKUP_TABLE, {
+        method: "POST",
+        headers: {
+            "Prefer": "resolution=merge-duplicates,return=minimal"
+        },
+        body: JSON.stringify(payload)
+    });
+}
+
+async function cleanupOldAutomaticBackups() {
+    const cutoff = new Date(
+        Date.now() - AUTO_BACKUP_RETENTION_DAYS * 24 * 60 * 60 * 1000
+    ).toISOString();
+
+    await api(
+        AUTO_BACKUP_TABLE +
+        "?created_at=lt." +
+        encodeURIComponent(cutoff),
+        {
+            method: "DELETE",
+            headers: {
+                "Prefer": "return=minimal"
+            }
+        }
+    );
+}
+
+async function runAutomaticBackupIfNeeded() {
+    if (!authSession || !authSession.access_token) return;
+
+    try {
+        const latest = await getLatestAutomaticBackup();
+        const latestTime = latest && latest.created_at
+            ? new Date(latest.created_at).getTime()
+            : 0;
+
+        if (latestTime && Date.now() - latestTime < AUTO_BACKUP_INTERVAL_MS) {
+            console.log("СТО: автоматическая копия за последние 24 часа уже есть.");
+            await cleanupOldAutomaticBackups();
+            return;
+        }
+
+        console.log("СТО: создаём автоматическую резервную копию...");
+        const backup = await createBackupObject();
+        const verification = validateBackupObjectDetailed(backup);
+
+        if (verification.errors.length) {
+            console.error(
+                "СТО: автоматическая копия не сохранена — проверка не пройдена.",
+                verification.errors
+            );
+            setStatus(
+                "⚠️ Автокопия не сохранена: проверка данных не пройдена.",
+                true
+            );
+            return;
+        }
+
+        await saveAutomaticBackup(backup, verification);
+        await cleanupOldAutomaticBackups();
+
+        setStatus(
+            "☁️ Автоматическая резервная копия создана и проверена. Хранение: 30 дней."
+        );
+        console.log(
+            "СТО: автоматическая копия сохранена.",
+            backup.backup_created_at
+        );
+    } catch (error) {
+        console.error("Ошибка автоматической резервной копии:", error);
+        setStatus(
+            "⚠️ Не удалось создать автоматическую копию: " + error.message,
+            true
+        );
+    }
+}
 
 function openBackupModal() {
     const bg = document.getElementById("backupBg");
@@ -7094,6 +7197,13 @@ async function runStartup() {
     }
 
     await startRealtimeSync();
+
+    // Автокопия запускается после полной загрузки данных и авторизации.
+    // Если за последние 24 часа копия уже есть, новая не создаётся.
+    setTimeout(() => {
+        runAutomaticBackupIfNeeded();
+    }, 1000);
+
     checkForProgramUpdate();
 }
 
