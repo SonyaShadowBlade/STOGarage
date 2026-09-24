@@ -718,7 +718,7 @@
 
         <div class="modal-header">
 
-            <h2>Новый клиент</h2>
+            <h2 id="clientModalTitle">Новый клиент</h2>
 
             <button
                 class="btn-secondary"
@@ -1329,6 +1329,8 @@ let vehicles = [];
 
 let currentVehicle = null;
 
+let editingClientId = null;
+
 
 /*
     Если здесь есть ID —
@@ -1818,6 +1820,15 @@ function renderClients() {
                         <div class="form-buttons">
 
                             <button
+                                class="btn-secondary"
+                                onclick="openEditClientModal(
+                                    '${client.id}'
+                                )"
+                            >
+                                ✏️ Изменить данные
+                            </button>
+
+                            <button
                                 class="btn-danger"
                                 onclick="deleteClient(
                                     '${client.id}'
@@ -1985,282 +1996,132 @@ function renderVehicle(
 ===================================================== */
 
 function openClientModal() {
-
-    document.getElementById(
-        "clientModalBg"
-    ).style.display = "block";
-
-
-    document.getElementById(
-        "clientName"
-    ).value = "";
-
-
-    document.getElementById(
-        "clientPhone"
-    ).value = "";
-
-
-    document.getElementById(
-        "clientEmail"
-    ).value = "";
-
-
-    document.getElementById(
-        "clientNotes"
-    ).value = "";
-
-
-    document.getElementById(
-        "vehicleMake"
-    ).value = "";
-
-
-    document.getElementById(
-        "vehicleModel"
-    ).value = "";
-
-
-    document.getElementById(
-        "vehiclePlate"
-    ).value = "";
-
-
-    document.getElementById(
-        "vehicleVin"
-    ).value = "";
-
-
-    document.getElementById(
-        "vehicleYear"
-    ).value = "";
-
-
-    document.getElementById(
-        "vehicleEngine"
-    ).value = "";
-
-
-    document.getElementById(
-        "vehicleMileage"
-    ).value = "";
-
+    editingClientId = null;
+    document.getElementById("clientModalTitle").textContent = "Новый клиент";
+    document.getElementById("clientModalBg").style.display = "block";
+    document.getElementById("clientName").value = "";
+    document.getElementById("clientPhone").value = "";
+    document.getElementById("clientEmail").value = "";
+    document.getElementById("clientNotes").value = "";
+    document.getElementById("vehicleMake").value = "";
+    document.getElementById("vehicleModel").value = "";
+    document.getElementById("vehiclePlate").value = "";
+    document.getElementById("vehicleVin").value = "";
+    document.getElementById("vehicleYear").value = "";
+    document.getElementById("vehicleEngine").value = "";
+    document.getElementById("vehicleMileage").value = "";
 }
 
+function openEditClientModal(id) {
+    const client = clients.find(c => c.id === id);
+    if (!client) return;
+
+    editingClientId = id;
+    document.getElementById("clientModalTitle").textContent = "Изменить данные клиента";
+    document.getElementById("clientName").value = client.name || "";
+    document.getElementById("clientPhone").value = client.phone || "";
+    document.getElementById("clientEmail").value = client.email || "";
+    document.getElementById("clientNotes").value = client.notes || "";
+
+    document.getElementById("vehicleMake").value = "";
+    document.getElementById("vehicleModel").value = "";
+    document.getElementById("vehiclePlate").value = "";
+    document.getElementById("vehicleVin").value = "";
+    document.getElementById("vehicleYear").value = "";
+    document.getElementById("vehicleEngine").value = "";
+    document.getElementById("vehicleMileage").value = "";
+
+    document.getElementById("clientModalBg").style.display = "block";
+}
 
 function closeClientModal() {
-
-    document.getElementById(
-        "clientModalBg"
-    ).style.display = "none";
-
+    document.getElementById("clientModalBg").style.display = "none";
+    editingClientId = null;
 }
 
-
 async function saveClient() {
-
-    const name =
-        document.getElementById(
-            "clientName"
-        )
-        .value
-        .trim();
-
+    const name = document.getElementById("clientName").value.trim();
 
     if (!name) {
-
-        alert(
-            "Введите имя клиента."
-        );
-
+        alert("Введите имя клиента.");
         return;
     }
 
-
     try {
+        const clientData = {
+            name: name,
+            phone: document.getElementById("clientPhone").value.trim(),
+            email: document.getElementById("clientEmail").value.trim(),
+            notes: document.getElementById("clientNotes").value.trim()
+        };
 
-        const client =
+        if (editingClientId) {
             await api(
-
-                "clients",
-
+                "clients?id=eq." + encodeURIComponent(editingClientId),
                 {
-                    method: "POST",
-
+                    method: "PATCH",
                     headers: {
-                        "Prefer":
-                            "return=representation"
+                        "Prefer": "return=representation"
                     },
-
-                    body:
-                        JSON.stringify({
-
-                            name: name,
-
-                            phone:
-                                document
-                                .getElementById(
-                                    "clientPhone"
-                                )
-                                .value
-                                .trim(),
-
-                            email:
-                                document
-                                .getElementById(
-                                    "clientEmail"
-                                )
-                                .value
-                                .trim(),
-
-                            notes:
-                                document
-                                .getElementById(
-                                    "clientNotes"
-                                )
-                                .value
-                                .trim()
-
-                        })
-
+                    body: JSON.stringify(clientData)
                 }
-
             );
 
-
-        const clientId =
-            client[0].id;
-
-
-        const make =
-            document.getElementById(
-                "vehicleMake"
-            )
-            .value
-            .trim();
-
-
-        const model =
-            document.getElementById(
-                "vehicleModel"
-            )
-            .value
-            .trim();
-
-
-        if (
-
-            make ||
-            model ||
-
-            document
-                .getElementById(
-                    "vehiclePlate"
-                )
-                .value
-                .trim() ||
-
-            document
-                .getElementById(
-                    "vehicleVin"
-                )
-                .value
-                .trim()
-
-        ) {
-
-            await api(
-
-                "vehicles",
-
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Prefer":
-                            "return=representation"
-                    },
-
-                    body:
-                        JSON.stringify({
-
-                            client_id:
-                                clientId,
-
-                            plate:
-                                document
-                                .getElementById(
-                                    "vehiclePlate"
-                                )
-                                .value
-                                .trim(),
-
-                            vin:
-                                document
-                                .getElementById(
-                                    "vehicleVin"
-                                )
-                                .value
-                                .trim(),
-
-                            make: make,
-
-                            model: model,
-
-                            year:
-                                parseInteger(
-                                    document
-                                    .getElementById(
-                                        "vehicleYear"
-                                    )
-                                    .value
-                                ),
-
-                            engine:
-                                document
-                                .getElementById(
-                                    "vehicleEngine"
-                                )
-                                .value
-                                .trim(),
-
-                            current_mileage:
-                                parseInteger(
-                                    document
-                                    .getElementById(
-                                        "vehicleMileage"
-                                    )
-                                    .value
-                                )
-
-                        })
-
-                }
-
-            );
-
+            closeClientModal();
+            await loadData();
+            return;
         }
 
-
-        closeClientModal();
-
-        await loadData();
-
-
-    } catch (error) {
-
-        console.error(error);
-
-
-        alert(
-            "Ошибка сохранения клиента:\n\n" +
-            error.message
+        const client = await api(
+            "clients",
+            {
+                method: "POST",
+                headers: {
+                    "Prefer": "return=representation"
+                },
+                body: JSON.stringify(clientData)
+            }
         );
 
+        const clientId = client[0].id;
+        const make = document.getElementById("vehicleMake").value.trim();
+        const model = document.getElementById("vehicleModel").value.trim();
+
+        if (
+            make ||
+            model ||
+            document.getElementById("vehiclePlate").value.trim() ||
+            document.getElementById("vehicleVin").value.trim()
+        ) {
+            await api(
+                "vehicles",
+                {
+                    method: "POST",
+                    headers: {
+                        "Prefer": "return=representation"
+                    },
+                    body: JSON.stringify({
+                        client_id: clientId,
+                        plate: document.getElementById("vehiclePlate").value.trim(),
+                        vin: document.getElementById("vehicleVin").value.trim(),
+                        make: make,
+                        model: model,
+                        year: parseInteger(document.getElementById("vehicleYear").value),
+                        engine: document.getElementById("vehicleEngine").value.trim(),
+                        current_mileage: parseInteger(document.getElementById("vehicleMileage").value)
+                    })
+                }
+            );
+        }
+
+        closeClientModal();
+        await loadData();
+
+    } catch (error) {
+        console.error(error);
+        alert("Ошибка сохранения клиента:\n\n" + error.message);
     }
-
 }
-
 
 /* =====================================================
    УДАЛЕНИЕ КЛИЕНТА
