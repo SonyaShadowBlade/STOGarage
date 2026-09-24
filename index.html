@@ -7,6 +7,57 @@
 
 <style>
 
+    .auth-bg {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        background: #f3f5f7;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .auth-card {
+        width: min(420px, 100%);
+        background: white;
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.16);
+    }
+
+    .auth-title {
+        font-size: 28px;
+        font-weight: 900;
+        margin-bottom: 8px;
+        text-align: center;
+    }
+
+    .auth-subtitle {
+        text-align: center;
+        color: #666;
+        margin-bottom: 22px;
+    }
+
+    .auth-error {
+        display: none;
+        margin-top: 12px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: #fee2e2;
+        color: #991b1b;
+        font-size: 13px;
+    }
+
+    .auth-card .btn-primary {
+        width: 100%;
+        margin-top: 6px;
+    }
+
+    .auth-logout {
+        margin-left: auto;
+    }
+
     .kick-scene-bg {
         display: none;
         position: fixed;
@@ -676,8 +727,36 @@
 
 <body>
 
-<header>
-    🚗 СТО — сервисная база
+<div id="authBg" class="auth-bg">
+    <div class="auth-card">
+        <div class="auth-title">🔐 Вход в СТО</div>
+        <div class="auth-subtitle">Доступ только для авторизованных пользователей</div>
+
+        <form onsubmit="login(event)">
+            <div class="field">
+                <label for="authEmail">Email</label>
+                <input id="authEmail" type="email" autocomplete="username" required placeholder="Введите email">
+            </div>
+
+            <div class="field">
+                <label for="authPassword">Пароль</label>
+                <input id="authPassword" type="password" autocomplete="current-password" required placeholder="Введите пароль">
+            </div>
+
+            <button id="authLoginButton" class="btn-primary" type="submit">
+                🔑 Войти
+            </button>
+
+            <div id="authError" class="auth-error"></div>
+        </form>
+    </div>
+</div>
+
+<header style="display:flex;align-items:center;gap:12px;">
+    <span>🚗 СТО — сервисная база</span>
+    <button id="logoutButton" class="btn-secondary auth-logout" onclick="logout()" style="display:none;">
+        🚪 Выйти
+    </button>
 </header>
 
 <div class="container">
@@ -1398,13 +1477,177 @@ const SUPABASE_URL =
 const SUPABASE_KEY =
     "sb_publishable_CwQfxteL0l2-xO7UiclS6g_kJ7IcBvk";
 
+const AUTH_STORAGE_KEY = "sto_supabase_session";
+
+let authSession = null;
+
+function getStoredSession() {
+    try {
+        const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+        return null;
+    }
+}
+
+function saveSession(session) {
+    authSession = session;
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+}
+
+function clearSession() {
+    authSession = null;
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+}
+
+function showAuth(show = true) {
+    const bg = document.getElementById("authBg");
+    const logoutButton = document.getElementById("logoutButton");
+    if (bg) bg.style.display = show ? "flex" : "none";
+    if (logoutButton) logoutButton.style.display = show ? "none" : "block";
+}
+
+function showAuthError(message) {
+    const el = document.getElementById("authError");
+    if (!el) return;
+    el.textContent = message;
+    el.style.display = "block";
+}
+
+function clearAuthError() {
+    const el = document.getElementById("authError");
+    if (el) {
+        el.textContent = "";
+        el.style.display = "none";
+    }
+}
+
+async function authRequest(path, options = {}) {
+    const response = await fetch(
+        SUPABASE_URL + "/auth/v1/" + path,
+        {
+            ...options,
+            headers: {
+                "apikey": SUPABASE_KEY,
+                "Content-Type": "application/json",
+                ...(options.headers || {})
+            }
+        }
+    );
+
+    const text = await response.text();
+    let data = null;
+
+    try {
+        data = text ? JSON.parse(text) : null;
+    } catch (error) {
+        data = null;
+    }
+
+    if (!response.ok) {
+        throw new Error(
+            (data && (data.msg || data.error_description || data.message || data.error))
+            || "Ошибка авторизации"
+        );
+    }
+
+    return data;
+}
+
+async function login(event) {
+    event.preventDefault();
+    clearAuthError();
+
+    const button = document.getElementById("authLoginButton");
+    const email = document.getElementById("authEmail").value.trim();
+    const password = document.getElementById("authPassword").value;
+
+    if (!email || !password) return;
+
+    button.disabled = true;
+    button.textContent = "⏳ Входим...";
+
+    try {
+        const session = await authRequest("token?grant_type=password", {
+            method: "POST",
+            body: JSON.stringify({
+                email,
+                password
+            })
+        });
+
+        saveSession(session);
+        document.getElementById("authPassword").value = "";
+        showAuth(false);
+        await loadData();
+    } catch (error) {
+        console.error("Ошибка входа:", error);
+        showAuthError("Не удалось войти. Проверьте email и пароль.");
+    } finally {
+        button.disabled = false;
+        button.textContent = "🔑 Войти";
+    }
+}
+
+async function refreshAuthSession() {
+    const stored = getStoredSession();
+
+    if (!stored || !stored.refresh_token) {
+        return false;
+    }
+
+    try {
+        const session = await authRequest("token?grant_type=refresh_token", {
+            method: "POST",
+            body: JSON.stringify({
+                refresh_token: stored.refresh_token
+            })
+        });
+
+        saveSession(session);
+        return true;
+    } catch (error) {
+        console.warn("Сессию не удалось обновить:", error);
+        clearSession();
+        return false;
+    }
+}
+
+function getAuthHeaders() {
+    return authSession && authSession.access_token
+        ? {
+            "Authorization": "Bearer " + authSession.access_token
+        }
+        : {};
+}
+
+async function logout() {
+    try {
+        if (authSession && authSession.access_token) {
+            await authRequest("logout", {
+                method: "POST",
+                headers: getAuthHeaders()
+            });
+        }
+    } catch (error) {
+        console.warn("Выход из Supabase:", error);
+    }
+
+    clearSession();
+    clients = [];
+    vehicles = [];
+    renderClients();
+    showAuth(true);
+    setStatus("Выполните вход в СТО.");
+}
+
+
+
 
 const headers = {
 
     "apikey": SUPABASE_KEY,
-
-    "Authorization":
-        "Bearer " + SUPABASE_KEY,
 
     "Content-Type":
         "application/json"
@@ -1475,6 +1718,7 @@ async function api(path, options = {}) {
                 signal: controller.signal,
                 headers: {
                     ...headers,
+                    ...getAuthHeaders(),
                     ...(options.headers || {})
                 }
             }
@@ -5856,6 +6100,26 @@ function kickEngineer() {
 ===================================================== */
 
 async function runStartup() {
+    const stored = getStoredSession();
+
+    if (!stored || !stored.access_token) {
+        showAuth(true);
+        setStatus("Выполните вход в СТО.");
+        return;
+    }
+
+    authSession = stored;
+
+    const refreshed = await refreshAuthSession();
+
+    if (!refreshed && !authSession) {
+        showAuth(true);
+        setStatus("Сессия закончилась. Выполните вход снова.");
+        return;
+    }
+
+    showAuth(false);
+
     try {
         await loadData();
     } catch (error) {
