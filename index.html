@@ -805,7 +805,7 @@
 
             <div class="field">
                 <label>Телефон</label>
-                <input id="clientPhone">
+                <input id="clientPhone" type="tel" oninput="formatPhone(this)" placeholder="+375 29 639 82 55">
             </div>
 
             <div class="field">
@@ -2302,6 +2302,23 @@ async function saveClient() {
         alert("Ошибка сохранения клиента:\n\n" + error.message);
     }
 }
+
+function formatPhone(input) {
+    const digits = input.value.replace(/\D/g, "").slice(0, 11);
+    if (!digits) {
+        input.value = "";
+        return;
+    }
+
+    let formatted = "+" + digits.slice(0, 3);
+    if (digits.length > 3) formatted += " " + digits.slice(3, 5);
+    if (digits.length > 5) formatted += " " + digits.slice(5, 7);
+    if (digits.length > 7) formatted += " " + digits.slice(7, 9);
+    if (digits.length > 9) formatted += " " + digits.slice(9, 11);
+
+    input.value = formatted;
+}
+
 
 function sanitizePlate(input) {
     input.value = input.value.replace(/[А-Яа-яЁё]/g, "").toUpperCase();
