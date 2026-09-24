@@ -997,6 +997,13 @@
         </div>
 
 
+        <div
+            id="serviceFormTotal"
+            style="margin:18px 0 8px;padding:14px 16px;border:1px solid rgba(255,255,255,.12);border-radius:10px;font-size:18px;font-weight:700;text-align:right;"
+        >
+            Итого: 0.00 BYN
+        </div>
+
         <div class="form-buttons">
 
             <button
@@ -3276,7 +3283,7 @@ function addWorkRow(
             step="1"
             placeholder="Общая стоимость"
             value="${escapeAttr(totalPrice !== "" && totalPrice !== null ? totalPrice : (price !== "" && quantity ? Number(price) * Number(quantity) : ""))}"
-            oninput="updateLineTotal(this, true)"
+            oninput="updateLineTotal(this, true); updateServiceFormTotal()"
         >
 
 
@@ -3295,7 +3302,8 @@ function addWorkRow(
             onclick="
                 this
                 .closest('.line-row')
-                .remove()
+                .remove();
+                updateServiceFormTotal()
             "
         >
             ✕
@@ -3306,6 +3314,11 @@ function addWorkRow(
 
     container.appendChild(row);
 
+    const currencySelect = row.querySelector(".work-currency");
+    if (currencySelect) currencySelect.addEventListener("change", updateServiceFormTotal);
+    const quantityInput = row.querySelector(".work-quantity");
+    if (quantityInput) quantityInput.addEventListener("input", () => updateLineTotal(quantityInput));
+    updateServiceFormTotal();
 
     setupAutocomplete(
 
@@ -3467,6 +3480,11 @@ function addPartRow(
 
     container.appendChild(row);
 
+    const currencySelect = row.querySelector(".part-currency");
+    if (currencySelect) currencySelect.addEventListener("change", updateServiceFormTotal);
+    const quantityInput = row.querySelector(".part-quantity");
+    if (quantityInput) quantityInput.addEventListener("input", () => updateLineTotal(quantityInput));
+    updateServiceFormTotal();
 
     setupAutocomplete(
 
@@ -3512,6 +3530,48 @@ function updateLineTotal(input, manual = false) {
         }
     }
     totalInput.readOnly = false;
+    updateServiceFormTotal();
+}
+
+function updateServiceFormTotal() {
+    const target = document.getElementById("serviceFormTotal");
+    if (!target) return;
+
+    const totals = {};
+
+    document.querySelectorAll("#worksContainer .line-row, #partsContainer .line-row")
+        .forEach(row => {
+            const totalInput = row.querySelector(".work-total, .part-total");
+            const priceInput = row.querySelector(".work-price, .part-price");
+            const quantityInput = row.querySelector(".work-quantity, .part-quantity");
+            const currencyInput = row.querySelector(".work-currency, .part-currency");
+
+            if (!totalInput || !currencyInput) return;
+
+            let total = Number(totalInput.value);
+            if ((!Number.isFinite(total) || totalInput.value.trim() === "") && priceInput && quantityInput) {
+                const price = Number(priceInput.value);
+                const quantity = Number(quantityInput.value || 0);
+                total = Number.isFinite(price) && Number.isFinite(quantity) ? price * quantity : 0;
+            }
+
+            if (!Number.isFinite(total) || total <= 0) return;
+
+            const currency = currencyInput.value || "BYN";
+            totals[currency] = (totals[currency] || 0) + total;
+        });
+
+    const entries = Object.entries(totals);
+    if (!entries.length) {
+        target.textContent = "Итого: 0.00 BYN";
+        return;
+    }
+
+    target.textContent = "Итого: " + entries
+        .map(function(entry) {
+            return entry[1].toFixed(2) + " " + entry[0];
+        })
+        .join(" + ");
 }
 
 /* =====================================================
