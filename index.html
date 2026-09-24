@@ -769,12 +769,12 @@
 
             <div class="field">
                 <label>Госномер</label>
-                <input id="vehiclePlate">
+                <input id="vehiclePlate" type="text" autocomplete="off" oninput="sanitizePlate(this)" placeholder="Например ABC123">
             </div>
 
             <div class="field">
                 <label>VIN</label>
-                <input id="vehicleVin">
+                <div id="vehicleVinFields"><div class="vin-row" style="display:flex;gap:8px;margin-bottom:8px;"><input id="vehicleVin" class="vehicle-vin-input" type="text" autocomplete="off" oninput="sanitizeVin(this)" placeholder="VIN"></div></div><button type="button" class="btn-secondary small-button" onclick="addVinField()">＋ Добавить VIN</button>
             </div>
 
             <div class="field">
@@ -2006,7 +2006,7 @@ function openClientModal() {
     document.getElementById("vehicleMake").value = "";
     document.getElementById("vehicleModel").value = "";
     document.getElementById("vehiclePlate").value = "";
-    document.getElementById("vehicleVin").value = "";
+    setVehicleVins("");
     document.getElementById("vehicleYear").value = "";
     document.getElementById("vehicleEngine").value = "";
     document.getElementById("vehicleMileage").value = "";
@@ -2093,7 +2093,7 @@ async function saveClient() {
             const vehicleData = {
                 client_id: editingClientId,
                 plate: document.getElementById("vehiclePlate").value.trim(),
-                vin: document.getElementById("vehicleVin").value.trim(),
+                vin: vehicleVinValue,
                 make: document.getElementById("vehicleMake").value.trim(),
                 model: document.getElementById("vehicleModel").value.trim(),
                 year: parseInteger(
@@ -2144,6 +2144,8 @@ async function saveClient() {
             return;
         }
 
+        const vehicleVinValue = getVehicleVins().join("\n");
+
         const client = await api(
             "clients",
             {
@@ -2175,7 +2177,7 @@ async function saveClient() {
                     body: JSON.stringify({
                         client_id: clientId,
                         plate: document.getElementById("vehiclePlate").value.trim(),
-                        vin: document.getElementById("vehicleVin").value.trim(),
+                        vin: getVehicleVins().join("\n"),
                         make: make,
                         model: model,
                         year: parseInteger(document.getElementById("vehicleYear").value),
@@ -2193,6 +2195,76 @@ async function saveClient() {
         console.error(error);
         alert("Ошибка сохранения клиента:\n\n" + error.message);
     }
+}
+
+function sanitizePlate(input) {
+    input.value = input.value.replace(/[А-Яа-яЁё]/g, "").toUpperCase();
+}
+
+function sanitizeVin(input) {
+    input.value = input.value.replace(/[А-Яа-яЁё]/g, "").toUpperCase();
+}
+
+function addVinField(value = "") {
+    const container = document.getElementById("vehicleVinFields");
+    if (!container) return;
+    const row = document.createElement("div");
+    row.className = "vin-row";
+    row.style.cssText = "display:flex;gap:8px;margin-bottom:8px;";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "vehicle-vin-input";
+    input.autocomplete = "off";
+    input.placeholder = "VIN";
+    input.value = value || "";
+    input.setAttribute("oninput", "sanitizeVin(this)");
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "btn-danger small-button";
+    remove.textContent = "✕";
+    remove.title = "Удалить VIN";
+    remove.onclick = () => row.remove();
+    row.appendChild(input);
+    row.appendChild(remove);
+    container.appendChild(row);
+    sanitizeVin(input);
+}
+
+function getVehicleVins() {
+    return Array.from(document.querySelectorAll("#vehicleVinFields .vehicle-vin-input"))
+        .map(input => input.value.trim())
+        .filter(Boolean);
+}
+
+function setVehicleVins(value) {
+    const container = document.getElementById("vehicleVinFields");
+    if (!container) return;
+    container.innerHTML = "";
+    const values = String(value || "").split(/[\n,]+/).map(v => v.trim()).filter(Boolean);
+    if (!values.length) {
+        addVinField("");
+        return;
+    }
+    values.forEach((vin, index) => {
+        if (index === 0) {
+            const row = document.createElement("div");
+            row.className = "vin-row";
+            row.style.cssText = "display:flex;gap:8px;margin-bottom:8px;";
+            const input = document.createElement("input");
+            input.id = "vehicleVin";
+            input.type = "text";
+            input.className = "vehicle-vin-input";
+            input.autocomplete = "off";
+            input.placeholder = "VIN";
+            input.value = vin;
+            input.setAttribute("oninput", "sanitizeVin(this)");
+            row.appendChild(input);
+            container.appendChild(row);
+            sanitizeVin(input);
+        } else {
+            addVinField(vin);
+        }
+    });
 }
 
 /* =====================================================
