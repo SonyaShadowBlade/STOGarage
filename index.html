@@ -39,6 +39,22 @@
         margin-bottom: 22px;
     }
 
+    .auth-forgot,
+    .auth-back {
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    .auth-message {
+        display: none;
+        margin-top: 12px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: #ecfdf5;
+        color: #166534;
+        font-size: 13px;
+    }
+
     .auth-error {
         display: none;
         margin-top: 12px;
@@ -732,7 +748,7 @@
         <div class="auth-title">🔐 Вход в СТО</div>
         <div class="auth-subtitle">Доступ только для авторизованных пользователей</div>
 
-        <form onsubmit="login(event)">
+        <form id="authForm" onsubmit="login(event)">
             <div class="field">
                 <label for="authEmail">Email</label>
                 <input id="authEmail" type="email" autocomplete="username" required placeholder="Введите email">
@@ -747,7 +763,46 @@
                 🔑 Войти
             </button>
 
+            <button id="forgotPasswordButton" class="btn-secondary auth-forgot" type="button" onclick="showForgotPassword()">
+                Забыли пароль?
+            </button>
+
             <div id="authError" class="auth-error"></div>
+        </form>
+
+        <form id="forgotForm" onsubmit="requestPasswordReset(event)" style="display:none;">
+            <div class="field">
+                <label for="forgotEmail">Email</label>
+                <input id="forgotEmail" type="email" autocomplete="email" required placeholder="Введите email">
+            </div>
+
+            <button id="forgotButton" class="btn-primary" type="submit">
+                📩 Отправить письмо
+            </button>
+
+            <button class="btn-secondary auth-back" type="button" onclick="showLoginForm()">
+                ← Назад ко входу
+            </button>
+
+            <div id="forgotMessage" class="auth-message"></div>
+        </form>
+
+        <form id="newPasswordForm" onsubmit="updatePassword(event)" style="display:none;">
+            <div class="field">
+                <label for="newPassword">Новый пароль</label>
+                <input id="newPassword" type="password" autocomplete="new-password" minlength="6" required placeholder="Введите новый пароль">
+            </div>
+
+            <div class="field">
+                <label for="newPasswordConfirm">Повторите пароль</label>
+                <input id="newPasswordConfirm" type="password" autocomplete="new-password" minlength="6" required placeholder="Повторите новый пароль">
+            </div>
+
+            <button id="newPasswordButton" class="btn-primary" type="submit">
+                🔐 Сохранить новый пароль
+            </button>
+
+            <div id="newPasswordMessage" class="auth-message"></div>
         </form>
     </div>
 </div>
@@ -1523,6 +1578,163 @@ function clearAuthError() {
     }
 }
 
+function showLoginForm() {
+    document.getElementById("authForm").style.display = "block";
+    document.getElementById("forgotForm").style.display = "none";
+    document.getElementById("newPasswordForm").style.display = "none";
+    clearAuthError();
+}
+
+function showForgotPassword() {
+    document.getElementById("authForm").style.display = "none";
+    document.getElementById("forgotForm").style.display = "block";
+    document.getElementById("newPasswordForm").style.display = "none";
+    clearAuthError();
+
+    const email = document.getElementById("authEmail").value.trim();
+    if (email) {
+        document.getElementById("forgotEmail").value = email;
+    }
+}
+
+function showNewPasswordForm() {
+    document.getElementById("authForm").style.display = "none";
+    document.getElementById("forgotForm").style.display = "none";
+    document.getElementById("newPasswordForm").style.display = "block";
+    clearAuthError();
+}
+
+function showAuthMessage(id, message, error = false) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = message;
+    el.style.display = "block";
+    el.style.background = error ? "#fee2e2" : "#ecfdf5";
+    el.style.color = error ? "#991b1b" : "#166534";
+}
+
+async function requestPasswordReset(event) {
+    event.preventDefault();
+
+    const button = document.getElementById("forgotButton");
+    const email = document.getElementById("forgotEmail").value.trim();
+
+    if (!email) return;
+
+    button.disabled = true;
+    button.textContent = "⏳ Отправляем...";
+
+    try {
+        await authRequest("recover", {
+            method: "POST",
+            body: JSON.stringify({
+                email,
+                redirect_to: window.location.origin + window.location.pathname
+            })
+        });
+
+        showAuthMessage(
+            "forgotMessage",
+            "Письмо отправлено. Откройте самое последнее письмо и перейдите по ссылке для смены пароля."
+        );
+    } catch (error) {
+        console.error("Ошибка восстановления пароля:", error);
+        showAuthMessage(
+            "forgotMessage",
+            error.message || "Не удалось отправить письмо.",
+            true
+        );
+    } finally {
+        button.disabled = false;
+        button.textContent = "📩 Отправить письмо";
+    }
+}
+
+async function updatePassword(event) {
+    event.preventDefault();
+
+    const password = document.getElementById("newPassword").value;
+    const confirm = document.getElementById("newPasswordConfirm").value;
+    const button = document.getElementById("newPasswordButton");
+
+    if (password !== confirm) {
+        showAuthMessage("newPasswordMessage", "Пароли не совпадают.", true);
+        return;
+    }
+
+    if (password.length < 6) {
+        showAuthMessage("newPasswordMessage", "Пароль должен содержать минимум 6 символов.", true);
+        return;
+    }
+
+    if (!authSession || !authSession.access_token) {
+        showAuthMessage("newPasswordMessage", "Ссылка восстановления недействительна или истекла.", true);
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = "⏳ Сохраняем...";
+
+    try {
+        await authRequest("user", {
+            method: "PUT",
+            headers: {
+                "Authorization": "Bearer " + authSession.access_token
+            },
+            body: JSON.stringify({
+                password
+            })
+        });
+
+        document.getElementById("newPassword").value = "";
+        document.getElementById("newPasswordConfirm").value = "";
+        showAuthMessage("newPasswordMessage", "Пароль изменён. Сейчас откроется СТО.");
+
+        setTimeout(async () => {
+            showAuth(false);
+            await loadData();
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }, 900);
+    } catch (error) {
+        console.error("Ошибка смены пароля:", error);
+        showAuthMessage("newPasswordMessage", error.message || "Не удалось изменить пароль.", true);
+    } finally {
+        button.disabled = false;
+        button.textContent = "🔐 Сохранить новый пароль";
+    }
+}
+
+function restoreRecoverySession() {
+    const hash = window.location.hash.replace(/^#/, "");
+    if (!hash) return false;
+
+    const params = new URLSearchParams(hash);
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+    const type = params.get("type");
+
+    if (accessToken && refreshToken && type === "recovery") {
+        saveSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+            token_type: params.get("token_type") || "bearer",
+            expires_in: Number(params.get("expires_in") || 3600)
+        });
+        showAuth(false);
+        showNewPasswordForm();
+        return true;
+    }
+
+    if (params.get("error_code") === "otp_expired") {
+        showAuth(true);
+        showLoginForm();
+        showAuthError("Ссылка восстановления истекла. Запросите новое письмо.");
+        return true;
+    }
+
+    return false;
+}
+
 async function authRequest(path, options = {}) {
     const response = await fetch(
         SUPABASE_URL + "/auth/v1/" + path,
@@ -1546,6 +1758,12 @@ async function authRequest(path, options = {}) {
     }
 
     if (!response.ok) {
+        if (response.status === 401 && path.indexOf("token?grant_type=refresh_token") !== 0) {
+            clearSession();
+            showAuth(true);
+            showLoginForm();
+            setStatus("Сессия закончилась. Выполните вход снова.");
+        }
         throw new Error(
             (data && (data.msg || data.error_description || data.message || data.error))
             || "Ошибка авторизации"
@@ -6100,6 +6318,10 @@ function kickEngineer() {
 ===================================================== */
 
 async function runStartup() {
+    if (restoreRecoverySession()) {
+        return;
+    }
+
     const stored = getStoredSession();
 
     if (!stored || !stored.access_token) {
