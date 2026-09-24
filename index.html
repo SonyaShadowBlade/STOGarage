@@ -1434,9 +1434,7 @@ async function api(path, options = {}) {
    ВАЛЮТЫ
 ===================================================== */
 
-function currencyOptions(
-    selected = "EUR"
-) {
+function currencyOptions(\n    selected = "BYN"\n) {
 
     const currencies = [
 
@@ -3912,7 +3910,7 @@ async function saveService() {
                                     currency
                                 )
                                 ? currency
-                                : "EUR"
+                                : "BYN"
 
                         })
 
@@ -4028,7 +4026,7 @@ async function saveService() {
                                     currency
                                 )
                                 ? currency
-                                : "EUR"
+                                : "BYN"
 
                         })
 
@@ -4539,7 +4537,7 @@ async function updateExistingService(
                                     currency
                                 )
                                 ? currency
-                                : "EUR"
+                                : "BYN"
 
                         })
 
@@ -4657,7 +4655,7 @@ async function updateExistingService(
                                     currency
                                 )
                                 ? currency
-                                : "EUR"
+                                : "BYN"
 
                         })
 
@@ -4759,9 +4757,7 @@ function chooseCurrency(
                     style="margin-bottom:16px;"
                 >
                     ${currencyOptions(
-                        allowedCurrency(selected)
-                        ? selected
-                        : "EUR"
+                        allowedCurrency(selected)\n                        ? selected\n                        : "BYN"
                     )}
                 </select>
 
@@ -4940,7 +4936,7 @@ function openQuickLineDialog(
                     <div class="field">
                         <label>Валюта</label>
                         <select id="quickLineCurrency">
-                            ${currencyOptions("EUR")}
+                            ${currencyOptions("BYN")}
                         </select>
                     </div>
 
@@ -5085,7 +5081,7 @@ function openQuickLineDialog(
                                 currency
                             )
                             ? currency
-                            : "EUR"
+                            : "BYN"
 
                     };
 
