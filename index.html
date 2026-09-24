@@ -2692,7 +2692,9 @@ async function loadServices() {
             );
 
         investmentAmount.textContent =
-            entries.length ? entries.join(" + ") : "0.00 BYN";
+            entries.length
+                ? entries.map(entry => entry.replace(" Br", " BYN")).join(" + ")
+                : "0.00 BYN";
     }
 
 }
