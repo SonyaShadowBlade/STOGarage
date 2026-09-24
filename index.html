@@ -1308,6 +1308,7 @@
 </div>
 
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* =====================================================
    SUPABASE
@@ -1596,6 +1597,8 @@ const SUPABASE_KEY =
 const AUTH_STORAGE_KEY = "sto_supabase_session";
 
 let authSession = null;
+let realtimeChannel = null;
+let realtimeReloadTimer = null;
 
 function getStoredSession() {
     try {
@@ -1888,6 +1891,7 @@ async function login(event) {
         document.getElementById("authPassword").value = "";
         showAuth(false);
         await loadData();
+        await startRealtimeSync();
     } catch (error) {
         console.error("Ошибка входа:", error);
         showAuthError("Не удалось войти. Проверьте email и пароль.");
@@ -1922,6 +1926,124 @@ async function refreshAuthSession() {
     }
 }
 
+function scheduleRealtimeReload() {
+    clearTimeout(realtimeReloadTimer);
+    realtimeReloadTimer = setTimeout(async () => {
+        if (!authSession || !authSession.access_token) return;
+
+        try {
+            await loadData();
+        } catch (error) {
+            console.error("Ошибка синхронизации:", error);
+        }
+    }, 500);
+}
+
+async function startRealtimeSync() {
+    if (!authSession || !authSession.access_token || !window.supabase) return;
+
+    stopRealtimeSync();
+
+    try {
+        const realtimeClient = window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_KEY,
+            {
+                auth: {
+                    persistSession: false,
+                    autoRefreshToken: false
+                },
+                realtime: {
+                    params: {
+                        eventsPerSecond: 10
+                    }
+                }
+            }
+        );
+
+        realtimeClient.realtime.setAuth(authSession.access_token);
+
+        realtimeChannel = realtimeClient
+            .channel("sto-live-sync")
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "clients"
+                },
+                scheduleRealtimeReload
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "vehicles"
+                },
+                scheduleRealtimeReload
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "services"
+                },
+                scheduleRealtimeReload
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "service_items"
+                },
+                scheduleRealtimeReload
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "service_parts"
+                },
+                scheduleRealtimeReload
+            );
+
+        realtimeChannel.subscribe((status) => {
+            console.log("СТО Realtime:", status);
+
+            if (status === "SUBSCRIBED") {
+                setStatus("Подключено к облачной базе. Синхронизация в реальном времени включена.");
+            }
+
+            if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+                setTimeout(() => {
+                    if (authSession && authSession.access_token) {
+                        startRealtimeSync();
+                    }
+                }, 3000);
+            }
+        });
+    } catch (error) {
+        console.error("Не удалось запустить Realtime:", error);
+    }
+}
+
+function stopRealtimeSync() {
+    if (realtimeChannel && window.supabase) {
+        try {
+            realtimeChannel.unsubscribe();
+        } catch (error) {
+            console.warn("Ошибка отключения Realtime:", error);
+        }
+    }
+
+    realtimeChannel = null;
+    clearTimeout(realtimeReloadTimer);
+}
+
 function getAuthHeaders() {
     return authSession && authSession.access_token
         ? {
@@ -1946,6 +2068,7 @@ async function logout() {
     clients = [];
     vehicles = [];
     renderClients();
+    stopRealtimeSync();
     showAuth(true);
     setStatus("Выполните вход в СТО.");
 }
@@ -6438,6 +6561,7 @@ async function runStartup() {
         console.error("Ошибка загрузки СТО:", error);
     }
 
+    await startRealtimeSync();
     checkForProgramUpdate();
 }
 
