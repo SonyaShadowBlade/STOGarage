@@ -1705,6 +1705,16 @@ function closeChangelog() {
 }
 
 async function checkVersionNow() {
+    const reloadKey = "sto_manual_version_reload";
+    const alreadyReloaded = sessionStorage.getItem(reloadKey) === "1";
+
+    if (alreadyReloaded) {
+        sessionStorage.removeItem(reloadKey);
+        showVersionCheck("Проверка завершена. Страница уже была обновлена один раз.", true);
+        setTimeout(closeVersionCheck, 1800);
+        return;
+    }
+
     showVersionCheck("Проверяем актуальность программы...");
 
     try {
@@ -1728,18 +1738,21 @@ async function checkVersionNow() {
             return;
         }
 
-        if (remoteVersion === APP_VERSION) {
-            showVersionCheck("✅ Версия актуальна: " + APP_VERSION, true);
-        } else {
-            showVersionCheck(
-                "ℹ️ На GitHub уже есть версия " + remoteVersion +
-                ". Текущая загруженная версия: " + APP_VERSION +
-                ". Обновление страницы сейчас не запускаем.",
-                true
-            );
-        }
+        sessionStorage.setItem(reloadKey, "1");
+        showVersionCheck(
+            "GitHub: " + remoteVersion + ". Обновляем страницу один раз...",
+            false
+        );
 
-        setTimeout(closeVersionCheck, 2800);
+        setTimeout(() => {
+            const freshUrl =
+                window.location.origin +
+                window.location.pathname +
+                "?refresh=" + Date.now();
+
+            window.location.replace(freshUrl);
+        }, 500);
+
     } catch (error) {
         console.warn("Не удалось проверить версию:", error);
         showVersionCheck("Не удалось проверить версию. Проверьте соединение.", true);
