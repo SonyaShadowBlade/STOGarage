@@ -10,14 +10,31 @@ on conflict (user_id) do update
 set full_name = excluded.full_name,
     role = excluded.role;
 
--- Admin/father helpers.
+-- Explicit staff roles.
+-- Users without a profile are intentionally denied access to the main STO tables.
+insert into public.profiles (user_id, full_name, role)
+select id, 'Александр Комаров', 'admin'
+from auth.users
+where lower(email) = lower('komarov.aleksandr.1@gmail.com')
+on conflict (user_id) do update
+set full_name = excluded.full_name,
+    role = excluded.role;
+
+insert into public.profiles (user_id, full_name, role)
+select id, 'Юрий Комаров', 'father'
+from auth.users
+where lower(email) = lower('komarov.yurik.1@gmail.com')
+on conflict (user_id) do update
+set full_name = excluded.full_name,
+    role = excluded.role;
+
 create or replace function public.is_staff()
 returns boolean
 language sql stable security definer
 set search_path = public
-as $$
-  select coalesce(public.current_user_role() in ('admin','father') or public.current_user_role() is null, false)
-$$;
+as $
+  select public.current_user_role() in ('admin','father')
+$;
 
 -- Remove existing policies from the core STO tables so the new role rules
 -- cannot be bypassed by an old permissive policy.
@@ -88,6 +105,9 @@ grant select, insert, update, delete on public.service_parts to authenticated;
 
 -- The grants above are needed by RLS for staff; policies are what restrict
 -- renter access. Renter has no matching core-table policy.
+--
+-- IMPORTANT: every authenticated user must now have an explicit profile role.
+-- Users without a profile are intentionally denied core-table access.
 
 create or replace function public.get_my_rental_vehicles()
 returns setof public.vehicles
