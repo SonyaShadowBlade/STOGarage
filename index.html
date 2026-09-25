@@ -929,6 +929,10 @@
             ＋ Добавить клиента
         </button>
 
+        <button class="rental-button" onclick="openRentalModal()">
+            🚚 Аренда
+        </button>
+
         <button class="btn-secondary" onclick="checkVersionNow()">
             ℹ️ Проверить версию
         </button>
@@ -2824,7 +2828,44 @@ let rentalClientId=null;
 function rentalStorageKey(id){return "stogarage_rental_"+id}
 function getRentalRecords(id){try{const x=JSON.parse(localStorage.getItem(rentalStorageKey(id))||"[]");return Array.isArray(x)?x:[]}catch(e){return[]}}
 function saveRentalRecords(id,x){localStorage.setItem(rentalStorageKey(id),JSON.stringify(x))}
-function openRentalModal(clientId){const client=clients.find(c=>c.id===clientId);if(!client)return;rentalClientId=clientId;const vs=vehicles.filter(v=>v.client_id===clientId),s=document.getElementById("rentalVehicleSelect");s.innerHTML=vs.length?vs.map(v=>{const t=[v.make,v.model].filter(Boolean).join(" ")||"Автомобиль";return '<option value="'+v.id+'">'+escapeHtml(t+((((v.make||"")+" "+(v.model||"")).toLowerCase().includes("iveco"))?" — АРЕНДА":""))+'</option>'}).join(""):"<option value=\"\">Автомобиль не найден</option>";document.getElementById("rentalClientName").textContent=client.name||"";document.getElementById("rentalModalBg").style.display="block";const iveco=vs.find(v=>(((v.make||"")+" "+(v.model||"")).toLowerCase().includes("iveco")));if(iveco)s.value=iveco.id;const today=new Date().toISOString().slice(0,10);["rentalTripDate","rentalFuelDate","rentalIssueDate"].forEach(id=>document.getElementById(id).value=today);renderRentalDashboard()}
+function openRentalModal(){
+    rentalClientId = null;
+
+    const eligible = vehicles.filter(v => {
+        const text = ((v.make || "") + " " + (v.model || "") + " " + (v.name || "")).toLowerCase();
+        return text.includes("iveco") || text.includes("boro") || text.includes("боро") || text.includes("прицеп");
+    });
+
+    const select = document.getElementById("rentalVehicleSelect");
+
+    select.innerHTML = eligible.length
+        ? eligible.map(v => {
+            const title = [v.make, v.model].filter(Boolean).join(" ") || v.name || "Транспорт";
+            const owner = clients.find(c => c.id === v.client_id);
+            const ownerName = owner && owner.name ? " — " + owner.name : "";
+            return '<option value="' + v.id + '">' + escapeHtml(title + ownerName) + '</option>';
+        }).join("")
+        : '<option value="">Ивеко или прицеп Боро не найдены</option>';
+
+    document.getElementById("rentalClientName").textContent = "Ивеко / прицеп Боро";
+    document.getElementById("rentalModalBg").style.display = "block";
+
+    const iveco = eligible.find(v => {
+        const text = ((v.make || "") + " " + (v.model || "")).toLowerCase();
+        return text.includes("iveco");
+    });
+    if (iveco) {
+        select.value = iveco.id;
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    ["rentalTripDate","rentalFuelDate","rentalIssueDate"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = today;
+    });
+
+    renderRentalDashboard();
+}
 function closeRentalModal(){document.getElementById("rentalModalBg").style.display="none";rentalClientId=null}
 function selectedRentalVehicle(){return vehicles.find(v=>v.id===document.getElementById("rentalVehicleSelect").value)||null}
 function showRentalTab(tab){["trip","fuel","issue"].forEach(n=>{const C=n.charAt(0).toUpperCase()+n.slice(1);document.getElementById("rental"+C+"Panel").style.display=n===tab?"block":"none";document.getElementById("rentalTab"+C).classList.toggle("active",n===tab)})}
@@ -2990,8 +3031,6 @@ function renderClients() {
                             >
                                 ＋ Добавить автомобиль
                             </button>
-
-                            ${String(client.name || "").trim().toLowerCase() === "санечка мебельщик" ? `<button class="rental-button" onclick="openRentalModal('${client.id}')">🚚 Аренда</button>` : ""}
 
                             <button
                                 class="btn-secondary"
