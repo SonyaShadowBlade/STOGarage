@@ -879,6 +879,40 @@
     .sanechka-vehicle-meta { color:#64748b; margin-bottom:18px; }
     .sanechka-actions { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
     .sanechka-actions button { min-height:58px; font-size:15px; font-weight:800; }
+    .sanechka-trip-history {
+        margin-top: 12px;
+        padding: 14px;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+    }
+    .sanechka-trip-history-title {
+        font-size: 15px;
+        font-weight: 900;
+        margin-bottom: 9px;
+    }
+    .sanechka-trip-history-item {
+        padding: 10px 0;
+        border-top: 1px solid #e5e7eb;
+    }
+    .sanechka-trip-history-item:first-child {
+        border-top: 0;
+        padding-top: 0;
+    }
+    .sanechka-trip-history-date {
+        font-weight: 800;
+        margin-bottom: 3px;
+    }
+    .sanechka-trip-history-meta {
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.45;
+    }
+    .sanechka-trip-history-empty {
+        color: #64748b;
+        font-size: 13px;
+    }
+
     .sanechka-note {
         margin-top:14px;
         padding:12px;
@@ -1055,6 +1089,13 @@
             <button class="rental-button" onclick="openRentalModal()">🛣 Поездки</button>
             <button class="btn-primary" onclick="openRentalModal(); setTimeout(()=>showRentalTab('fuel'),50)">⛽ Заправка</button>
             <button class="btn-danger" onclick="openRentalModal(); setTimeout(()=>showRentalTab('issue'),50)">⚠️ Проблема</button>
+        </div>
+
+        <div class="sanechka-trip-history">
+            <div class="sanechka-trip-history-title">🛣 Последние поездки</div>
+            <div id="sanechkaTripHistory">
+                Загружаем историю...
+            </div>
         </div>
 
         <div class="sanechka-note">
@@ -3107,6 +3148,8 @@ async function loadSanechkaRentalData() {
             "автомобилей:",
             rentalVehicles.length
         );
+
+        await renderSanechkaTripHistory();
     } catch (error) {
         console.error("Ошибка загрузки кабинета аренды:", error);
         rentalVehicles = [];
@@ -3116,6 +3159,55 @@ async function loadSanechkaRentalData() {
         if (title) title.textContent = "🚚 Кабинет аренды";
         if (meta) meta.textContent = "Не удалось загрузить назначенный автомобиль.";
         setStatus("Ошибка загрузки кабинета аренды: " + error.message, true);
+    }
+}
+
+async function renderSanechkaTripHistory() {
+    const el = document.getElementById("sanechkaTripHistory");
+    if (!el) return;
+
+    const vehicle = rentalVehicles && rentalVehicles[0];
+    if (!vehicle) {
+        el.innerHTML = '<div class="sanechka-trip-history-empty">Арендный автомобиль пока не назначен.</div>';
+        return;
+    }
+
+    try {
+        const rows = await api(
+            "rental_trips?vehicle_id=eq." +
+            encodeURIComponent(vehicle.id) +
+            "&order=trip_date.desc,created_at.desc&limit=10"
+        );
+
+        if (!Array.isArray(rows) || !rows.length) {
+            el.innerHTML = '<div class="sanechka-trip-history-empty">Поездок пока нет.</div>';
+            return;
+        }
+
+        el.innerHTML = rows.map(r => {
+            const start = Number(r.start_mileage);
+            const end = Number(r.end_mileage);
+            const km = Number.isFinite(start) && Number.isFinite(end)
+                ? Math.max(0, end - start)
+                : 0;
+
+            return '<div class="sanechka-trip-history-item">' +
+                '<div class="sanechka-trip-history-date">🛣 ' +
+                escapeHtml(r.trip_date || "") +
+                ' · ' + km.toLocaleString("ru-RU") + ' км</div>' +
+                '<div class="sanechka-trip-history-meta">' +
+                'Пробег: ' +
+                (Number.isFinite(start) ? start.toLocaleString("ru-RU") : "—") +
+                ' → ' +
+                (Number.isFinite(end) ? end.toLocaleString("ru-RU") : "—") +
+                ' км' +
+                (r.driver ? ' · Водитель: ' + escapeHtml(r.driver) : '') +
+                (r.route_note ? '<br>' + escapeHtml(r.route_note) : '') +
+                '</div></div>';
+        }).join("");
+    } catch (error) {
+        console.error("Ошибка загрузки истории поездок Санечки:", error);
+        el.innerHTML = '<div class="sanechka-trip-history-empty">Не удалось загрузить историю поездок.</div>';
     }
 }
 
@@ -3335,6 +3427,9 @@ async function saveRentalTrip(){
             document.getElementById("rentalTripEnd").value="";
             document.getElementById("rentalTripNote").value="";
             rentalSaved("Поездка сохранена.");
+            if (isSanechkaAccount()) {
+                await renderSanechkaTripHistory();
+            }
         }
     }catch(error){
         console.error(error);
