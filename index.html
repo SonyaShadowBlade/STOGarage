@@ -851,46 +851,75 @@
 
     .sanechka-portal {
         display: none;
-        max-width: 760px;
+        width: 100%;
+        max-width: 520px;
         margin: 0 auto;
+        padding: 12px 12px 30px;
     }
     .sanechka-portal.visible { display: block; }
+    .sanechka-profile {
+        margin-bottom: 12px;
+    }
     .sanechka-welcome {
         background: #1f2937;
         color: white;
-        border-radius: 16px;
-        padding: 22px;
-        margin-bottom: 16px;
-        box-shadow: 0 6px 20px rgba(0,0,0,.12);
+        border-radius: 18px;
+        padding: 18px;
+        margin-bottom: 12px;
+        box-shadow: 0 5px 18px rgba(0,0,0,.12);
     }
-    .sanechka-welcome h1 { margin: 0 0 6px; font-size: 26px; }
-    .sanechka-welcome p { margin: 0; color: #d1d5db; }
+    .sanechka-welcome h1 { margin: 0 0 5px; font-size: 22px; }
+    .sanechka-welcome p { margin: 0; color: #d1d5db; font-size: 13px; }
     .sanechka-vehicle {
         background: white;
-        border-radius: 16px;
-        padding: 20px;
+        border-radius: 18px;
+        padding: 16px;
         box-shadow: 0 3px 14px rgba(0,0,0,.08);
     }
     .sanechka-vehicle-title {
-        font-size: 24px;
+        font-size: 23px;
         font-weight: 900;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
     }
-    .sanechka-vehicle-meta { color:#64748b; margin-bottom:18px; }
-    .sanechka-actions { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-    .sanechka-actions button { min-height:58px; font-size:15px; font-weight:800; }
+    .sanechka-vehicle-meta { color:#64748b; margin-bottom:14px; font-size:13px; }
+    .sanechka-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .sanechka-actions button {
+        min-height:72px;
+        font-size:16px;
+        font-weight:900;
+        border-radius:14px;
+    }
+    .sanechka-action-trip { grid-column:1 / -1; }
     .sanechka-note {
-        margin-top:14px;
-        padding:12px;
-        border-radius:10px;
+        margin-top:12px;
+        padding:11px 12px;
+        border-radius:12px;
         background:#f8fafc;
         color:#64748b;
-        font-size:13px;
-        line-height:1.5;
+        font-size:12px;
+        line-height:1.45;
     }
-    @media(max-width:700px) {
-        .sanechka-actions { grid-template-columns:1fr; }
+    .sanechka-mobile-mileage {
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:10px;
+        margin-bottom:12px;
+        padding:13px;
+        border-radius:14px;
+        background:#f1f5f9;
     }
+    .sanechka-mobile-mileage-label { font-size:12px;color:#64748b; }
+    .sanechka-mobile-mileage-value { font-size:22px;font-weight:900; }
+    @media(max-width:600px) {
+        body { background:#f3f5f7; }
+        header { padding:12px 14px; font-size:18px; }
+        .sanechka-portal { max-width:none; padding:10px 10px 28px; }
+        .sanechka-profile { border-radius:14px; }
+        .sanechka-actions button { min-height:76px; }
+        .sanechka-vehicle { padding:14px; }
+    }
+
 
 </style>
 </head>
@@ -1044,32 +1073,38 @@
             <div class="sanechka-profile-role">Мебельщик</div>
         </div>
     </div>
-    <div style="margin-bottom:16px;">
-        <button class="btn-secondary" onclick="testSecurityAccess()">🔐 Проверить защиту</button>
-    </div>
 
     <div class="sanechka-welcome">
         <h1>🚚 Кабинет аренды</h1>
-        <p>Привет, Санечка! Здесь пока только управление арендой автомобиля.</p>
+        <p>Все данные сохраняются в облаке.</p>
     </div>
 
     <div class="sanechka-vehicle">
         <div class="sanechka-vehicle-title" id="sanechkaVehicleTitle">Ивеко</div>
-        <div class="sanechka-vehicle-meta" id="sanechkaVehicleMeta">
-            Загружаем данные автомобиля...
+        <div class="sanechka-vehicle-meta" id="sanechkaVehicleMeta">Загружаем данные автомобиля...</div>
+
+        <div class="sanechka-mobile-mileage">
+            <div>
+                <div class="sanechka-mobile-mileage-label">Текущий пробег</div>
+                <div class="sanechka-mobile-mileage-value" id="sanechkaMobileMileage">—</div>
+            </div>
+            <div>🚚</div>
         </div>
 
         <div class="sanechka-actions">
-            <button class="rental-button" onclick="openRentalModal()">🛣 Поездки</button>
+            <button class="rental-button sanechka-action-trip" onclick="openRentalModal(); setTimeout(()=>showRentalTab('trip'),50)">🛣 Начать поездку</button>
             <button class="btn-primary" onclick="openRentalModal(); setTimeout(()=>showRentalTab('fuel'),50)">⛽ Заправка</button>
             <button class="btn-danger" onclick="openRentalModal(); setTimeout(()=>showRentalTab('issue'),50)">⚠️ Проблема</button>
         </div>
 
+        <button class="btn-secondary" style="width:100%;min-height:52px;margin-top:10px;font-weight:800;" onclick="openRentalModal()">📋 История</button>
+
         <div class="sanechka-note">
-            Все введённые данные будут привязаны к выбранному арендному автомобилю.
-            Сейчас это первый этап интерфейса — дальнейший функционал добавим отдельно.
+            Заполняй данные сразу после поездки или заправки. Не закрывай страницу во время сохранения.
         </div>
     </div>
+</div>
+
 </div>
 
     <div id="kickSceneBg" class="kick-scene-bg" aria-hidden="true">
@@ -2637,41 +2672,6 @@ function setStatus(text, error = false) {
 
 
 
-async function testSecurityAccess() {
-    const tables = [
-        "clients",
-        "vehicles",
-        "services",
-        "service_items",
-        "service_parts"
-    ];
-
-    const results = [];
-
-    for (const table of tables) {
-        try {
-            const rows = await api(
-                table + "?select=id&limit=1"
-            );
-
-            if (Array.isArray(rows) && rows.length === 0) {
-                results.push("🔒 " + table + ": доступ закрыт RLS (0 строк)");
-            } else {
-                results.push("⚠️ " + table + ": запрос прошёл, получена строка");
-            }
-        } catch (error) {
-            results.push("🔒 " + table + ": запрос отклонён");
-        }
-    }
-
-    const message =
-        "Проверка защиты завершена.\\n\\n" +
-        results.join("\\n") +
-        "\\n\\nДля аккаунта Санечки ожидается: все 5 таблиц должны быть закрыты.";
-
-    alert(message);
-}
-
 async function api(path, options = {}) {
 
     const controller = new AbortController();
@@ -3318,7 +3318,7 @@ async function addRentalRecord(r){
     return true;
 }
 function rentalSaved(msg){const e=document.getElementById("rentalStatus");e.textContent=msg;e.style.display="block";setTimeout(()=>e.style.display="none",1800)}
-async function saveRentalTrip(){
+async async function saveRentalTrip(){
     const a=Number(document.getElementById("rentalTripStart").value);
     const b=Number(document.getElementById("rentalTripEnd").value);
     if(!Number.isFinite(a)||!Number.isFinite(b)||a<0||b<a){alert("Проверьте начальный и конечный пробег.");return}
@@ -3367,7 +3367,7 @@ async function saveRentalFuel(){
         alert("Не удалось сохранить заправку:\n\n"+error.message);
     }
 }
-async function saveRentalIssue(){
+async async function saveRentalIssue(){
     const m=Number(document.getElementById("rentalIssueMileage").value);
     const t=document.getElementById("rentalIssueText").value.trim();
     if(!t||!Number.isFinite(m)||m<0){alert("Укажите пробег и опишите проблему.");return}
