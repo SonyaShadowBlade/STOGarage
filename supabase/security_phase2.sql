@@ -16,7 +16,7 @@ returns boolean
 language sql stable security definer
 set search_path = public
 as $$
-  select coalesce(public.current_user_role() in ('admin','father'), false)
+  select coalesce(public.current_user_role() in ('admin','father') or public.current_user_role() is null, false)
 $$;
 
 -- Remove existing policies from the core STO tables so the new role rules
