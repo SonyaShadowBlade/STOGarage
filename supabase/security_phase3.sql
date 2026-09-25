@@ -117,3 +117,29 @@ grant execute on function public.get_my_service_history(uuid) to authenticated;
 -- Sanечка still has no direct SELECT/INSERT/UPDATE/DELETE access to:
 -- clients, vehicles, services, service_items, service_parts.
 -- Both RPCs above are SECURITY DEFINER and perform the access check themselves.
+
+-- Also assign the father's trailer to Санечка when it is identifiable by
+-- the current STO naming. This is additive and does not remove the Iveco.
+insert into public.rental_vehicle_access (user_id, vehicle_id)
+select u.id, v.id
+from auth.users u
+cross join lateral (
+    select id
+    from public.vehicles
+    where (
+        lower(coalesce(make,'') || ' ' || coalesce(model,'')) like '%прицеп%'
+        or lower(coalesce(make,'') || ' ' || coalesce(model,'')) like '%boro%'
+        or lower(coalesce(make,'') || ' ' || coalesce(model,'')) like '%боро%'
+    )
+    and lower(coalesce(make,'') || ' ' || coalesce(model,'')) not like '%iveco%'
+    order by created_at asc nulls last
+    limit 1
+) v
+where lower(u.email) = lower('michnin.aleksandr.1@gmail.com')
+  and not exists (
+      select 1
+      from public.rental_vehicle_access a
+      where a.user_id = u.id
+        and a.vehicle_id = v.id
+  )
+on conflict do nothing;
