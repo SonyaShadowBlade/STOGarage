@@ -1898,7 +1898,10 @@ async function checkVersionNow() {
 }
 
 async function checkForProgramUpdate(manualCheck = false) {
-    showVersionCheck("Проверяем актуальность программы...");
+    // При автоматической проверке окно показываем только если найдена новая версия.
+    if (manualCheck) {
+        showVersionCheck("Проверяем актуальность программы...");
+    }
 
     const updateKey = "sto_update_target_version";
     const attemptKey = "sto_update_attempts";
@@ -1924,8 +1927,10 @@ async function checkForProgramUpdate(manualCheck = false) {
         clearTimeout(timeoutId);
 
         if (!response.ok) {
-            showVersionCheck("Не удалось проверить версию. Запускаем программу.", true);
-            setTimeout(closeVersionCheck, 1500);
+            if (manualCheck) {
+                showVersionCheck("Не удалось проверить версию. Запускаем программу.", true);
+                setTimeout(closeVersionCheck, 1500);
+            }
             return;
         }
 
@@ -1933,8 +1938,10 @@ async function checkForProgramUpdate(manualCheck = false) {
         const remoteVersion = remote && remote.version;
 
         if (!remoteVersion) {
-            showVersionCheck("Версия не определена. Запускаем программу.", true);
-            setTimeout(closeVersionCheck, 1500);
+            if (manualCheck) {
+                showVersionCheck("Версия не определена. Запускаем программу.", true);
+                setTimeout(closeVersionCheck, 1500);
+            }
             return;
         }
 
@@ -1947,16 +1954,20 @@ async function checkForProgramUpdate(manualCheck = false) {
             sessionStorage.removeItem(updateKey);
             sessionStorage.removeItem(attemptKey);
             history.replaceState(null, "", window.location.pathname);
-            showVersionCheck("Обновление завершено. Версия: " + APP_VERSION, true);
-            setTimeout(closeVersionCheck, 900);
+            if (manualCheck) {
+                showVersionCheck("Обновление завершено. Версия: " + APP_VERSION, true);
+                setTimeout(closeVersionCheck, 900);
+            }
             return;
         }
 
         if (APP_VERSION === remoteVersion) {
             sessionStorage.removeItem(updateKey);
             sessionStorage.removeItem(attemptKey);
-            showVersionCheck("Версия программы актуальна: " + APP_VERSION, true);
-            setTimeout(closeVersionCheck, 900);
+            if (manualCheck) {
+                showVersionCheck("Версия программы актуальна: " + APP_VERSION, true);
+                setTimeout(closeVersionCheck, 900);
+            }
             return;
         }
 
@@ -8150,10 +8161,11 @@ async function runStartup() {
     }
 
     const userRole = String(sanechkaRentalProfile && sanechkaRentalProfile.role || "").toLowerCase();
-    const shouldCheckProgramUpdate = !isSanechkaAccount() && (userRole === "admin" || userRole === "father");
-    if (shouldCheckProgramUpdate) {
-        checkForProgramUpdate();
-    }
+    // Все пользователи автоматически проверяют версию.
+    // Окно проверки при входе показывается только admin/father;
+    // при устаревшей версии окно всё равно появляется для любого пользователя.
+    const isStaff = userRole === "admin" || userRole === "father";
+    checkForProgramUpdate(isStaff);
 }
 
 runStartup();
