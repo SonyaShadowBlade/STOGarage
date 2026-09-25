@@ -2894,11 +2894,12 @@ async function loadSuggestions() {
 
 
 
+const SANECHKA_EMAIL = "michnin.aleksandr.1@gmail.com";
+
 function isSanechkaAccount() {
     const email = String(authSession && authSession.user && authSession.user.email || "")
         .trim().toLowerCase();
-    const login = email.split("@")[0];
-    return login === "sanechka" || login.startsWith("sanechka.");
+    return email === SANECHKA_EMAIL;
 }
 
 function applyUserInterfaceMode() {
