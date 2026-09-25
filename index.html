@@ -2353,7 +2353,13 @@ async function login(event) {
         saveSession(session, remember);
         document.getElementById("authPassword").value = "";
         updateUserGreeting();
+
+        // Сначала сразу переключаем интерфейс по аккаунту,
+        // и только потом убираем окно авторизации.
+        // Поэтому Санечка не увидит даже краткого кадра обычного СТО.
+        applyUserInterfaceMode();
         showAuth(false);
+
         await loadData();
         applyUserInterfaceMode();
         if (!isSanechkaAccount()) {
