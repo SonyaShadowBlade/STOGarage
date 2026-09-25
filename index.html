@@ -1162,6 +1162,91 @@
 
 
 <!-- =========================
+     МОДАЛКА ДОБАВЛЕНИЯ АВТОМОБИЛЯ
+========================= -->
+
+<div id="addVehicleModalBg" class="modal-bg">
+
+    <div class="modal">
+
+        <div class="modal-header">
+
+            <h2>Добавить автомобиль</h2>
+
+            <button
+                class="btn-secondary"
+                onclick="closeAddVehicleModal()"
+            >
+                ✕
+            </button>
+
+        </div>
+
+        <div id="addVehicleClientName" style="color:#666;margin-bottom:18px;"></div>
+
+        <div class="grid-2">
+
+            <div class="field">
+                <label>Марка</label>
+                <input id="addVehicleMake">
+            </div>
+
+            <div class="field">
+                <label>Модель</label>
+                <input id="addVehicleModel">
+            </div>
+
+            <div class="field">
+                <label>Госномер</label>
+                <input id="addVehiclePlate" type="text" autocomplete="off" oninput="sanitizePlate(this)" placeholder="Например ABC123">
+            </div>
+
+            <div class="field">
+                <label>VIN</label>
+                <input id="addVehicleVin" type="text" autocomplete="off" oninput="sanitizeVin(this)" placeholder="VIN">
+            </div>
+
+            <div class="field">
+                <label>Год</label>
+                <input id="addVehicleYear" type="number">
+            </div>
+
+            <div class="field">
+                <label>Двигатель</label>
+                <input id="addVehicleEngine">
+            </div>
+
+            <div class="field">
+                <label>Текущий пробег</label>
+                <input id="addVehicleMileage" type="number">
+            </div>
+
+        </div>
+
+        <div class="form-buttons">
+
+            <button
+                class="btn-primary"
+                onclick="saveAdditionalVehicle()"
+            >
+                💾 Сохранить автомобиль
+            </button>
+
+            <button
+                class="btn-secondary"
+                onclick="closeAddVehicleModal()"
+            >
+                Отмена
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================
      МОДАЛКА АВТОМОБИЛЯ
 ========================= -->
 
@@ -1397,7 +1482,7 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.10";
+const APP_VERSION = "0.3.11";
 
 function showVersionCheck(text, success = false) {
     const bg = document.getElementById("versionCheckBg");
@@ -1422,6 +1507,14 @@ function closeVersionCheck() {
 }
 
 const CHANGELOG = [
+    {
+        version: "0.3.11",
+        date: "25.09.2026",
+        changes: [
+            "Добавлена возможность добавлять несколько автомобилей одному клиенту.",
+            "У каждого автомобиля сохраняется отдельная история обслуживания."
+        ]
+    },
     {
         version: "0.3.10",
         date: "23.09.2026",
@@ -2732,6 +2825,15 @@ function renderClients() {
                         <div class="form-buttons">
 
                             <button
+                                class="btn-success"
+                                onclick="openAddVehicleModal(
+                                    '${client.id}'
+                                )"
+                            >
+                                ＋ Добавить автомобиль
+                            </button>
+
+                            <button
                                 class="btn-secondary"
                                 onclick="openEditClientModal(
                                     '${client.id}'
@@ -2898,6 +3000,85 @@ function renderVehicle(
         </div>
 
     `;
+}
+
+
+/* =====================================================
+   ДОБАВЛЕНИЕ ДОПОЛНИТЕЛЬНОГО АВТОМОБИЛЯ
+===================================================== */
+
+let addingVehicleClientId = null;
+
+function openAddVehicleModal(clientId) {
+    const client = clients.find(c => c.id === clientId);
+    if (!client) return;
+
+    addingVehicleClientId = clientId;
+
+    document.getElementById("addVehicleClientName").textContent =
+        "Клиент: " + (client.name || "");
+
+    document.getElementById("addVehicleMake").value = "";
+    document.getElementById("addVehicleModel").value = "";
+    document.getElementById("addVehiclePlate").value = "";
+    document.getElementById("addVehicleVin").value = "";
+    document.getElementById("addVehicleYear").value = "";
+    document.getElementById("addVehicleEngine").value = "";
+    document.getElementById("addVehicleMileage").value = "";
+
+    document.getElementById("addVehicleModalBg").style.display = "block";
+}
+
+function closeAddVehicleModal() {
+    document.getElementById("addVehicleModalBg").style.display = "none";
+    addingVehicleClientId = null;
+}
+
+async function saveAdditionalVehicle() {
+    if (!addingVehicleClientId) return;
+
+    const make = document.getElementById("addVehicleMake").value.trim();
+    const model = document.getElementById("addVehicleModel").value.trim();
+    const plate = document.getElementById("addVehiclePlate").value.trim();
+    const vin = document.getElementById("addVehicleVin").value.trim();
+    const year = parseInteger(document.getElementById("addVehicleYear").value);
+    const engine = document.getElementById("addVehicleEngine").value.trim();
+    const mileage = parseInteger(document.getElementById("addVehicleMileage").value);
+
+    if (!make && !model && !plate && !vin && year === null && !engine && mileage === null) {
+        alert("Заполните хотя бы одно поле автомобиля.");
+        return;
+    }
+
+    try {
+        await api(
+            "vehicles",
+            {
+                method: "POST",
+                headers: {
+                    "Prefer": "return=representation"
+                },
+                body: JSON.stringify({
+                    client_id: addingVehicleClientId,
+                    plate: plate,
+                    vin: vin,
+                    make: make,
+                    model: model,
+                    year: year,
+                    engine: engine,
+                    current_mileage: mileage
+                })
+            }
+        );
+
+        closeAddVehicleModal();
+        await loadData();
+
+        setStatus("Автомобиль добавлен. Он привязан к выбранному клиенту.");
+    } catch (error) {
+        console.error(error);
+        alert("Ошибка добавления автомобиля:\n\n" + error.message);
+    }
 }
 
 
