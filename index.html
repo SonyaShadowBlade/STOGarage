@@ -2376,6 +2376,35 @@ async function login(event) {
         if (!isSanechkaAccount()) {
             await startRealtimeSync();
         }
+
+        // При обычном входе runStartup() не вызывается повторно,
+        // поэтому проверяем роль и версию здесь тоже.
+        try {
+            sanechkaRentalProfile = await api(
+                "rpc/get_my_rental_profile",
+                {
+                    method: "POST",
+                    body: JSON.stringify({})
+                }
+            );
+
+            if (Array.isArray(sanechkaRentalProfile)) {
+                sanechkaRentalProfile = sanechkaRentalProfile[0] || null;
+            }
+        } catch (roleError) {
+            sanechkaRentalProfile = null;
+            console.warn("Не удалось определить роль после входа:", roleError);
+        }
+
+        const userRole = String(
+            sanechkaRentalProfile && sanechkaRentalProfile.role || ""
+        ).toLowerCase();
+
+        const isStaff =
+            userRole === "admin" ||
+            userRole === "father";
+
+        checkForProgramUpdate(isStaff);
     } catch (error) {
         console.error("Ошибка входа:", error);
         showAuthError("Не удалось войти. Проверьте email и пароль.");
