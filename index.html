@@ -2978,7 +2978,7 @@ function applyUserInterfaceMode() {
     if (mainContainer) mainContainer.style.display = sanechka ? "none" : "";
     if (portal) portal.classList.toggle("visible", sanechka);
     if (headerTitle) {
-        headerTitle.textContent = sanechka ? "🚚 СТО — кабинет аренды" : "🚗 СТО — сервисная база";
+        headerTitle.textContent = sanechka ? "🚗 СТО — кабинет" : "🚗 СТО — сервисная база";
     }
 
     const extraWindows = [
@@ -2998,8 +2998,6 @@ function applyUserInterfaceMode() {
             const el = document.getElementById(id);
             if (el) el.style.display = "none";
         });
-    }
-
     }
 }
 
