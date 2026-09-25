@@ -8114,6 +8114,20 @@ async function runStartup() {
     }
 
     showAuth(false);
+
+    try {
+        sanechkaRentalProfile = await api(
+            "rpc/get_my_rental_profile",
+            {
+                method: "POST",
+                body: JSON.stringify({})
+            }
+        );
+    } catch (error) {
+        sanechkaRentalProfile = null;
+        console.warn("Не удалось определить роль пользователя:", error);
+    }
+
     applyUserInterfaceMode();
 
     try {
