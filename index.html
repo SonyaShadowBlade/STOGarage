@@ -2246,6 +2246,7 @@ async function updatePassword(event) {
         setTimeout(async () => {
             showAuth(false);
             await loadData();
+            applyUserInterfaceMode();
             window.history.replaceState({}, document.title, window.location.pathname);
         }, 900);
     } catch (error) {
@@ -2355,7 +2356,9 @@ async function login(event) {
         showAuth(false);
         await loadData();
         applyUserInterfaceMode();
-        await startRealtimeSync();
+        if (!isSanechkaAccount()) {
+            await startRealtimeSync();
+        }
     } catch (error) {
         console.error("Ошибка входа:", error);
         showAuthError("Не удалось войти. Проверьте email и пароль.");
@@ -2404,6 +2407,8 @@ function scheduleRealtimeReload() {
 }
 
 async function startRealtimeSync() {
+    // Санечка не подписывается на Realtime основных таблиц СТО.
+    if (isSanechkaAccount()) return;
     if (!authSession || !authSession.access_token || !window.supabase) return;
 
     stopRealtimeSync();
@@ -2544,6 +2549,8 @@ async function logout() {
     clearSession();
     clients = [];
     vehicles = [];
+    rentalVehicles = [];
+    sanechkaRentalProfile = null;
     renderClients();
     stopRealtimeSync();
     applyUserInterfaceMode();
@@ -2571,6 +2578,11 @@ const headers = {
 let clients = [];
 
 let vehicles = [];
+
+// Санечка получает только назначенные ему арендные автомобили через RPC.
+// Основные таблицы СТО для его аккаунта сюда вообще не загружаются.
+let rentalVehicles = [];
+let sanechkaRentalProfile = null;
 
 let currentVehicle = null;
 
@@ -2789,6 +2801,14 @@ function allowedCurrency(
 
 async function loadData() {
 
+    // Санечка не должен обращаться к clients/vehicles/services напрямую.
+    // Его кабинет получает только назначенные арендные автомобили через
+    // защищённые security-definer RPC.
+    if (isSanechkaAccount()) {
+        await loadSanechkaRentalData();
+        return;
+    }
+
     try {
 
         setStatus("Подключаемся к Supabase...");
@@ -2971,10 +2991,9 @@ function applyUserInterfaceMode() {
     }
 
     if (sanechka) {
-        const eligible = vehicles.filter(v => {
-            const text = ((v.make || "") + " " + (v.model || "") + " " + (v.name || "")).toLowerCase();
-            return text.includes("iveco") || text.includes("boro") || text.includes("боро") || text.includes("прицеп");
-        });
+        // Здесь только уже разрешённые RPC-данные. clients/vehicles из СТО
+        // для этого аккаунта не используются.
+        const eligible = rentalVehicles || [];
         const iveco = eligible.find(v => {
             const text = ((v.make || "") + " " + (v.model || "")).toLowerCase();
             return text.includes("iveco");
@@ -2985,7 +3004,7 @@ function applyUserInterfaceMode() {
 
         if (!iveco) {
             if (title) title.textContent = "🚚 Арендный автомобиль";
-            if (meta) meta.textContent = "Ивеко пока не найдено в базе.";
+            if (meta) meta.textContent = "Арендный автомобиль пока не назначен.";
             return;
         }
 
@@ -2993,13 +3012,157 @@ function applyUserInterfaceMode() {
             title.textContent = [iveco.make, iveco.model].filter(Boolean).join(" ") || "🚚 Арендный автомобиль";
         }
 
-        const owner = clients.find(c => c.id === iveco.client_id);
         const parts = [];
         if (iveco.plate) parts.push("Госномер: " + iveco.plate);
         if (iveco.current_mileage != null) parts.push("Пробег: " + Number(iveco.current_mileage).toLocaleString("ru-RU") + " км");
-        if (owner && owner.name) parts.push("Владелец: " + owner.name);
         if (meta) meta.textContent = parts.join(" · ") || "Автомобиль готов к работе.";
     }
+}
+
+
+async function loadSanechkaRentalData() {
+    try {
+        sanechkaRentalProfile = await api(
+            "rpc/get_my_rental_profile",
+            {
+                method: "POST",
+                body: JSON.stringify({})
+            }
+        );
+
+        rentalVehicles = await api(
+            "rpc/get_my_rental_vehicles",
+            {
+                method: "POST",
+                body: JSON.stringify({})
+            }
+        );
+
+        if (!Array.isArray(rentalVehicles)) {
+            rentalVehicles = [];
+        }
+
+        const title = document.getElementById("sanechkaVehicleTitle");
+        const meta = document.getElementById("sanechkaVehicleMeta");
+
+        if (!rentalVehicles.length) {
+            if (title) title.textContent = "🚚 Арендный автомобиль";
+            if (meta) meta.textContent = "Арендный автомобиль пока не назначен.";
+        } else {
+            applyUserInterfaceMode();
+        }
+
+        console.log(
+            "Кабинет аренды загружен:",
+            sanechkaRentalProfile,
+            "автомобилей:",
+            rentalVehicles.length
+        );
+    } catch (error) {
+        console.error("Ошибка загрузки кабинета аренды:", error);
+        rentalVehicles = [];
+
+        const title = document.getElementById("sanechkaVehicleTitle");
+        const meta = document.getElementById("sanechkaVehicleMeta");
+        if (title) title.textContent = "🚚 Кабинет аренды";
+        if (meta) meta.textContent = "Не удалось загрузить назначенный автомобиль.";
+        setStatus("Ошибка загрузки кабинета аренды: " + error.message, true);
+    }
+}
+
+async function getCloudRentalRecords(vehicleId) {
+    if (!isSanechkaAccount()) return [];
+
+    const [trips, fuels, issues] = await Promise.all([
+        api("rental_trips?vehicle_id=eq." + encodeURIComponent(vehicleId) + "&order=trip_date.desc,created_at.desc"),
+        api("rental_fuel?vehicle_id=eq." + encodeURIComponent(vehicleId) + "&order=fuel_date.desc,created_at.desc"),
+        api("rental_issues?vehicle_id=eq." + encodeURIComponent(vehicleId) + "&order=issue_date.desc,created_at.desc")
+    ]);
+
+    return [
+        ...trips.map(r => ({
+            id: r.id,
+            type: "trip",
+            date: r.trip_date,
+            driver: r.driver || "",
+            startMileage: r.start_mileage,
+            endMileage: r.end_mileage,
+            note: r.route_note || "",
+            createdAt: r.created_at
+        })),
+        ...fuels.map(r => ({
+            id: r.id,
+            type: "fuel",
+            date: r.fuel_date,
+            mileage: r.mileage,
+            liters: r.liters,
+            cost: r.cost,
+            note: r.note || "",
+            createdAt: r.created_at
+        })),
+        ...issues.map(r => ({
+            id: r.id,
+            type: "issue",
+            date: r.issue_date,
+            mileage: r.mileage,
+            text: r.description || "",
+            createdAt: r.created_at
+        }))
+    ];
+}
+
+async function saveCloudRentalRecord(vehicleId, record) {
+    if (!authSession || !authSession.user || !authSession.user.id) {
+        throw new Error("Не удалось определить пользователя.");
+    }
+
+    const base = {
+        user_id: authSession.user.id,
+        vehicle_id: vehicleId
+    };
+
+    if (record.type === "trip") {
+        await api("rental_trips", {
+            method: "POST",
+            headers: { "Prefer": "return=minimal" },
+            body: JSON.stringify({
+                ...base,
+                driver: record.driver || null,
+                trip_date: record.date || new Date().toISOString().slice(0, 10),
+                start_mileage: record.startMileage,
+                end_mileage: record.endMileage,
+                route_note: record.note || null
+            })
+        });
+        return;
+    }
+
+    if (record.type === "fuel") {
+        await api("rental_fuel", {
+            method: "POST",
+            headers: { "Prefer": "return=minimal" },
+            body: JSON.stringify({
+                ...base,
+                fuel_date: record.date || new Date().toISOString().slice(0, 10),
+                mileage: record.mileage,
+                liters: record.liters,
+                cost: record.cost,
+                note: record.note || null
+            })
+        });
+        return;
+    }
+
+    await api("rental_issues", {
+        method: "POST",
+        headers: { "Prefer": "return=minimal" },
+        body: JSON.stringify({
+            ...base,
+            issue_date: record.date || new Date().toISOString().slice(0, 10),
+            mileage: record.mileage,
+            description: record.text
+        })
+    });
 }
 
 
@@ -3010,24 +3173,33 @@ let rentalClientId=null;
 function rentalStorageKey(id){return "stogarage_rental_"+id}
 function getRentalRecords(id){try{const x=JSON.parse(localStorage.getItem(rentalStorageKey(id))||"[]");return Array.isArray(x)?x:[]}catch(e){return[]}}
 function saveRentalRecords(id,x){localStorage.setItem(rentalStorageKey(id),JSON.stringify(x))}
+function rentalVehicleList(){return isSanechkaAccount() ? rentalVehicles : vehicles}
 function openRentalModal(){
     rentalClientId = null;
 
-    const eligible = vehicles.filter(v => {
-        const text = ((v.make || "") + " " + (v.model || "") + " " + (v.name || "")).toLowerCase();
-        return text.includes("iveco") || text.includes("boro") || text.includes("боро") || text.includes("прицеп");
-    });
+    const sourceVehicles = rentalVehicleList();
+    const eligible = isSanechkaAccount()
+        ? sourceVehicles
+        : sourceVehicles.filter(v => {
+            const text = ((v.make || "") + " " + (v.model || "")).toLowerCase();
+            return text.includes("iveco") || text.includes("boro") || text.includes("боро") || text.includes("прицеп");
+        });
 
     const select = document.getElementById("rentalVehicleSelect");
 
     select.innerHTML = eligible.length
         ? eligible.map(v => {
-            const title = [v.make, v.model].filter(Boolean).join(" ") || v.name || "Транспорт";
-            const owner = clients.find(c => c.id === v.client_id);
-            const ownerName = owner && owner.name ? " — " + owner.name : "";
+            const title = [v.make, v.model].filter(Boolean).join(" ") || "Транспорт";
+            let ownerName = "";
+
+            if (!isSanechkaAccount()) {
+                const owner = clients.find(c => c.id === v.client_id);
+                ownerName = owner && owner.name ? " — " + owner.name : "";
+            }
+
             return '<option value="' + v.id + '">' + escapeHtml(title + ownerName) + '</option>';
         }).join("")
-        : '<option value="">Ивеко или прицеп Боро не найдены</option>';
+        : '<option value="">Назначенный автомобиль не найден</option>';
 
     document.getElementById("rentalClientName").textContent = "Ивеко / прицеп Боро";
     document.getElementById("rentalModalBg").style.display = "block";
@@ -3049,14 +3221,122 @@ function openRentalModal(){
     renderRentalDashboard();
 }
 function closeRentalModal(){document.getElementById("rentalModalBg").style.display="none";rentalClientId=null}
-function selectedRentalVehicle(){return vehicles.find(v=>v.id===document.getElementById("rentalVehicleSelect").value)||null}
+function selectedRentalVehicle(){return rentalVehicleList().find(v=>v.id===document.getElementById("rentalVehicleSelect").value)||null}
 function showRentalTab(tab){["trip","fuel","issue"].forEach(n=>{const C=n.charAt(0).toUpperCase()+n.slice(1);document.getElementById("rental"+C+"Panel").style.display=n===tab?"block":"none";document.getElementById("rentalTab"+C).classList.toggle("active",n===tab)})}
-function renderRentalDashboard(){const v=selectedRentalVehicle();if(!v)return;const rs=getRentalRecords(v.id),trips=rs.filter(r=>r.type==="trip"),fuels=rs.filter(r=>r.type==="fuel"),km=trips.reduce((s,r)=>s+Math.max(0,Number(r.endMileage)-Number(r.startMileage)),0),liters=fuels.reduce((s,r)=>s+Number(r.liters||0),0),cost=fuels.reduce((s,r)=>s+Number(r.cost||0),0);document.getElementById("rentalCurrentMileage").textContent=v.current_mileage!=null?Number(v.current_mileage).toLocaleString("ru-RU")+" км":"—";document.getElementById("rentalTotalKm").textContent=km.toLocaleString("ru-RU")+" км";document.getElementById("rentalFuelTotal").textContent=liters.toLocaleString("ru-RU",{maximumFractionDigits:2})+" л";document.getElementById("rentalExpenseTotal").textContent=cost.toLocaleString("ru-RU",{maximumFractionDigits:2});document.getElementById("rentalHistory").innerHTML=rs.length?[...rs].sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))).map(r=>{if(r.type==="trip"){const d=Math.max(0,Number(r.endMileage)-Number(r.startMileage));return '<div class="rental-record"><div class="rental-record-title">🛣 Поездка — '+escapeHtml(r.date||"")+'</div><div class="rental-record-meta">Водитель: '+escapeHtml(r.driver||"—")+' · '+Number(r.startMileage).toLocaleString("ru-RU")+' → '+Number(r.endMileage).toLocaleString("ru-RU")+' км · '+d.toLocaleString("ru-RU")+' км<br>'+escapeHtml(r.note||"")+'</div></div>'}if(r.type==="fuel")return '<div class="rental-record"><div class="rental-record-title">⛽ Заправка — '+escapeHtml(r.date||"")+'</div><div class="rental-record-meta">'+Number(r.liters||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+' л · '+Number(r.cost||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+' · пробег '+Number(r.mileage||0).toLocaleString("ru-RU")+' км<br>'+escapeHtml(r.note||"")+'</div></div>';return '<div class="rental-record"><div class="rental-record-title">⚠️ Проблема — '+escapeHtml(r.date||"")+'</div><div class="rental-record-meta">Пробег: '+Number(r.mileage||0).toLocaleString("ru-RU")+' км<br>'+escapeHtml(r.text||"")+'</div></div>'}).join(""):"<div class=\"empty\">Записей по аренде пока нет.</div>"}
-function addRentalRecord(r){const v=selectedRentalVehicle();if(!v){alert("Сначала выберите автомобиль.");return false}const rs=getRentalRecords(v.id);rs.push({id:Date.now()+"_"+Math.random().toString(36).slice(2),createdAt:new Date().toISOString(),...r});saveRentalRecords(v.id,rs);renderRentalDashboard();return true}
+async function renderRentalDashboard(){
+    const v=selectedRentalVehicle();
+    if(!v)return;
+
+    const rs = isSanechkaAccount()
+        ? await getCloudRentalRecords(v.id)
+        : getRentalRecords(v.id);
+
+    const trips=rs.filter(r=>r.type==="trip");
+    const fuels=rs.filter(r=>r.type==="fuel");
+    const km=trips.reduce((s,r)=>s+Math.max(0,Number(r.endMileage)-Number(r.startMileage)),0);
+    const liters=fuels.reduce((s,r)=>s+Number(r.liters||0),0);
+    const cost=fuels.reduce((s,r)=>s+Number(r.cost||0),0);
+
+    document.getElementById("rentalCurrentMileage").textContent=v.current_mileage!=null?Number(v.current_mileage).toLocaleString("ru-RU")+" км":"—";
+    document.getElementById("rentalTotalKm").textContent=km.toLocaleString("ru-RU")+" км";
+    document.getElementById("rentalFuelTotal").textContent=liters.toLocaleString("ru-RU",{maximumFractionDigits:2})+" л";
+    document.getElementById("rentalExpenseTotal").textContent=cost.toLocaleString("ru-RU",{maximumFractionDigits:2});
+
+    document.getElementById("rentalHistory").innerHTML=rs.length?[...rs].sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))).map(r=>{
+        if(r.type==="trip"){
+            const d=Math.max(0,Number(r.endMileage)-Number(r.startMileage));
+            return '<div class="rental-record"><div class="rental-record-title">🛣 Поездка — '+escapeHtml(r.date||"")+'</div><div class="rental-record-meta">Водитель: '+escapeHtml(r.driver||"—")+' · '+Number(r.startMileage).toLocaleString("ru-RU")+' → '+Number(r.endMileage).toLocaleString("ru-RU")+' км · '+d.toLocaleString("ru-RU")+' км<br>'+escapeHtml(r.note||"")+'</div></div>';
+        }
+        if(r.type==="fuel")
+            return '<div class="rental-record"><div class="rental-record-title">⛽ Заправка — '+escapeHtml(r.date||"")+'</div><div class="rental-record-meta">'+Number(r.liters||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+' л · '+Number(r.cost||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+' · пробег '+Number(r.mileage||0).toLocaleString("ru-RU")+' км<br>'+escapeHtml(r.note||"")+'</div></div>';
+        return '<div class="rental-record"><div class="rental-record-title">⚠️ Проблема — '+escapeHtml(r.date||"")+'</div><div class="rental-record-meta">Пробег: '+Number(r.mileage||0).toLocaleString("ru-RU")+' км<br>'+escapeHtml(r.text||"")+'</div></div>';
+    }).join(""):"<div class=\"empty\">Записей по аренде пока нет.</div>";
+}
+async function addRentalRecord(r){
+    const v=selectedRentalVehicle();
+    if(!v){alert("Сначала выберите автомобиль.");return false}
+
+    if(isSanechkaAccount()){
+        await saveCloudRentalRecord(v.id,r);
+    }else{
+        const rs=getRentalRecords(v.id);
+        rs.push({id:Date.now()+"_"+Math.random().toString(36).slice(2),createdAt:new Date().toISOString(),...r});
+        saveRentalRecords(v.id,rs);
+    }
+
+    await renderRentalDashboard();
+    return true;
+}
 function rentalSaved(msg){const e=document.getElementById("rentalStatus");e.textContent=msg;e.style.display="block";setTimeout(()=>e.style.display="none",1800)}
-function saveRentalTrip(){const a=Number(document.getElementById("rentalTripStart").value),b=Number(document.getElementById("rentalTripEnd").value);if(!Number.isFinite(a)||!Number.isFinite(b)||a<0||b<a){alert("Проверьте начальный и конечный пробег.");return}if(addRentalRecord({type:"trip",date:document.getElementById("rentalTripDate").value,driver:document.getElementById("rentalTripDriver").value.trim(),startMileage:a,endMileage:b,note:document.getElementById("rentalTripNote").value.trim()})){document.getElementById("rentalTripStart").value=b;document.getElementById("rentalTripEnd").value="";document.getElementById("rentalTripNote").value="";rentalSaved("Поездка сохранена.")}}
-function saveRentalFuel(){const l=Number(document.getElementById("rentalFuelLiters").value),c=Number(document.getElementById("rentalFuelCost").value),m=Number(document.getElementById("rentalFuelMileage").value);if(!Number.isFinite(l)||l<=0||!Number.isFinite(m)||m<0){alert("Укажите количество топлива и корректный пробег.");return}if(addRentalRecord({type:"fuel",date:document.getElementById("rentalFuelDate").value,mileage:m,liters:l,cost:Number.isFinite(c)&&c>=0?c:0,note:document.getElementById("rentalFuelNote").value.trim()})){document.getElementById("rentalFuelLiters").value="";document.getElementById("rentalFuelCost").value="";document.getElementById("rentalFuelNote").value="";rentalSaved("Заправка сохранена.")}}
-function saveRentalIssue(){const m=Number(document.getElementById("rentalIssueMileage").value),t=document.getElementById("rentalIssueText").value.trim();if(!t||!Number.isFinite(m)||m<0){alert("Укажите пробег и опишите проблему.");return}if(addRentalRecord({type:"issue",date:document.getElementById("rentalIssueDate").value,mileage:m,text:t})){document.getElementById("rentalIssueText").value="";rentalSaved("Проблема сохранена.")}}
+async function saveRentalTrip(){
+    const a=Number(document.getElementById("rentalTripStart").value);
+    const b=Number(document.getElementById("rentalTripEnd").value);
+    if(!Number.isFinite(a)||!Number.isFinite(b)||a<0||b<a){alert("Проверьте начальный и конечный пробег.");return}
+
+    try{
+        if(await addRentalRecord({
+            type:"trip",
+            date:document.getElementById("rentalTripDate").value,
+            driver:document.getElementById("rentalTripDriver").value.trim(),
+            startMileage:a,
+            endMileage:b,
+            note:document.getElementById("rentalTripNote").value.trim()
+        })){
+            document.getElementById("rentalTripStart").value=b;
+            document.getElementById("rentalTripEnd").value="";
+            document.getElementById("rentalTripNote").value="";
+            rentalSaved("Поездка сохранена.");
+        }
+    }catch(error){
+        console.error(error);
+        alert("Не удалось сохранить поездку:\n\n"+error.message);
+    }
+}
+async function saveRentalFuel(){
+    const l=Number(document.getElementById("rentalFuelLiters").value);
+    const c=Number(document.getElementById("rentalFuelCost").value);
+    const m=Number(document.getElementById("rentalFuelMileage").value);
+    if(!Number.isFinite(l)||l<=0||!Number.isFinite(m)||m<0){alert("Укажите количество топлива и корректный пробег.");return}
+
+    try{
+        if(await addRentalRecord({
+            type:"fuel",
+            date:document.getElementById("rentalFuelDate").value,
+            mileage:m,
+            liters:l,
+            cost:Number.isFinite(c)&&c>=0?c:0,
+            note:document.getElementById("rentalFuelNote").value.trim()
+        })){
+            document.getElementById("rentalFuelLiters").value="";
+            document.getElementById("rentalFuelCost").value="";
+            document.getElementById("rentalFuelNote").value="";
+            rentalSaved("Заправка сохранена.");
+        }
+    }catch(error){
+        console.error(error);
+        alert("Не удалось сохранить заправку:\n\n"+error.message);
+    }
+}
+async function saveRentalIssue(){
+    const m=Number(document.getElementById("rentalIssueMileage").value);
+    const t=document.getElementById("rentalIssueText").value.trim();
+    if(!t||!Number.isFinite(m)||m<0){alert("Укажите пробег и опишите проблему.");return}
+
+    try{
+        if(await addRentalRecord({
+            type:"issue",
+            date:document.getElementById("rentalIssueDate").value,
+            mileage:m,
+            text:t
+        })){
+            document.getElementById("rentalIssueText").value="";
+            rentalSaved("Проблема сохранена.");
+        }
+    }catch(error){
+        console.error(error);
+        alert("Не удалось сохранить проблему:\n\n"+error.message);
+    }
+}
 /* =====================================================
    КЛИЕНТЫ
 ===================================================== */
@@ -7837,7 +8117,9 @@ async function runStartup() {
         console.error("Ошибка загрузки СТО:", error);
     }
 
-    await startRealtimeSync();
+    if (!isSanechkaAccount()) {
+        await startRealtimeSync();
+    }
 
     // Автокопия запускается после полной загрузки данных и авторизации.
     // Если за последние 24 часа копия уже есть, новая не создаётся.
