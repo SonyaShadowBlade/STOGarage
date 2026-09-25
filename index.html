@@ -849,83 +849,20 @@
         font-weight: 700;
     }
 
-    .sanechka-portal {
-        display: none;
-        max-width: 760px;
-        margin: 0 auto;
-    }
-    .sanechka-portal.visible { display: block; }
-    .sanechka-welcome {
-        background: #1f2937;
-        color: white;
-        border-radius: 16px;
-        padding: 22px;
-        margin-bottom: 16px;
-        box-shadow: 0 6px 20px rgba(0,0,0,.12);
-    }
-    .sanechka-welcome h1 { margin: 0 0 6px; font-size: 26px; }
-    .sanechka-welcome p { margin: 0; color: #d1d5db; }
-    .sanechka-vehicle {
-        background: white;
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 3px 14px rgba(0,0,0,.08);
-    }
-    .sanechka-vehicle-title {
-        font-size: 24px;
-        font-weight: 900;
-        margin-bottom: 6px;
-    }
-    .sanechka-vehicle-meta { color:#64748b; margin-bottom:18px; }
-    .sanechka-actions { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-    .sanechka-actions button { min-height:58px; font-size:15px; font-weight:800; }
-    .sanechka-trip-history {
-        margin-top: 12px;
-        padding: 14px;
-        background: #f8fafc;
-        border: 1px solid #e5e7eb;
-        border-radius: 14px;
-    }
-    .sanechka-trip-history-title {
-        font-size: 15px;
-        font-weight: 900;
-        margin-bottom: 9px;
-    }
-    .sanechka-trip-history-item {
-        padding: 10px 0;
-        border-top: 1px solid #e5e7eb;
-    }
-    .sanechka-trip-history-item:first-child {
-        border-top: 0;
-        padding-top: 0;
-    }
-    .sanechka-trip-history-date {
-        font-weight: 800;
-        margin-bottom: 3px;
-    }
-    .sanechka-trip-history-meta {
-        color: #64748b;
-        font-size: 12px;
-        line-height: 1.45;
-    }
-    .sanechka-trip-history-empty {
-        color: #64748b;
-        font-size: 13px;
-    }
-
-    .sanechka-note {
-        margin-top:14px;
-        padding:12px;
-        border-radius:10px;
-        background:#f8fafc;
-        color:#64748b;
-        font-size:13px;
-        line-height:1.5;
-    }
-    @media(max-width:700px) {
-        .sanechka-actions { grid-template-columns:1fr; }
-    }
-
+    .sanechka-portal { display:none; max-width:560px; margin:0 auto; }
+    .sanechka-portal.visible { display:block; }
+    .sanechka-main-buttons { display:flex; flex-direction:column; gap:16px; margin-top:28px; }
+    .sanechka-main-button { width:100%; min-height:120px; border-radius:20px; font-size:27px; font-weight:900; box-shadow:0 8px 24px rgba(0,0,0,.10); }
+    .sanechka-service-button { background:#2563eb; color:white; }
+    .sanechka-rental-button { background:#0f766e; color:white; }
+    .sanechka-readonly-note { margin-top:16px; padding:12px 14px; border-radius:12px; background:#f8fafc; color:#64748b; font-size:13px; line-height:1.5; text-align:center; }
+    .sanechka-service-vehicle { border:1px solid #e5e7eb; border-radius:12px; padding:14px; margin-top:10px; background:#fff; cursor:pointer; }
+    .sanechka-service-vehicle:hover { background:#f8fafc; }
+    .sanechka-service-vehicle-title { font-size:17px; font-weight:900; }
+    .sanechka-service-vehicle-meta { margin-top:5px; color:#64748b; font-size:13px; line-height:1.5; }
+    .sanechka-service-history .service-card { margin-top:10px; }
+    .sanechka-service-back { margin-bottom:14px; }
+    @media(max-width:700px) { .sanechka-main-button { min-height:105px; font-size:24px; } }
 </style>
 </head>
 
@@ -1067,43 +1004,28 @@
 
     
 <div id="sanechkaPortal" class="sanechka-portal">
-    <div class="sanechka-profile">
-        <div class="sanechka-profile-icon">🪑</div>
-        <div>
-            <div class="sanechka-profile-name">Александр Михнин</div>
-            <div class="sanechka-profile-role">Мебельщик</div>
-        </div>
+    <div class="sanechka-main-buttons">
+        <button class="sanechka-main-button sanechka-service-button" onclick="openSanechkaServiceModal()">🔧 Обслуживание</button>
+        <button class="sanechka-main-button sanechka-rental-button" onclick="openRentalModal()">🚚 Аренда</button>
     </div>
-    <div class="sanechka-welcome">
-        <h1>🚚 Кабинет аренды</h1>
-        <p>Привет, Санечка! Здесь пока только управление арендой автомобиля.</p>
-    </div>
+    <div class="sanechka-readonly-note">«Обслуживание» — только просмотр. Редактирование и удаление недоступны.</div>
+</div>
 
-    <div class="sanechka-vehicle">
-        <div class="sanechka-vehicle-title" id="sanechkaVehicleTitle">Ивеко</div>
-        <div class="sanechka-vehicle-meta" id="sanechkaVehicleMeta">
-            Загружаем данные автомобиля...
-        </div>
-
-        <div class="sanechka-actions">
-            <button class="rental-button" onclick="openRentalModal()">🛣 Поездки</button>
-            <button class="btn-primary" onclick="openRentalModal(); setTimeout(()=>showRentalTab('fuel'),50)">⛽ Заправка</button>
-            <button class="btn-danger" onclick="openRentalModal(); setTimeout(()=>showRentalTab('issue'),50)">⚠️ Проблема</button>
-        </div>
-
-        <div class="sanechka-trip-history">
-            <div class="sanechka-trip-history-title">🛣 Последние поездки</div>
-            <div id="sanechkaTripHistory">
-                Загружаем историю...
+    <div id="sanechkaServiceModalBg" class="modal-bg">
+        <div class="modal" style="max-width:900px;">
+            <div class="modal-header">
+                <div><h2>🔧 Обслуживание</h2><div style="color:#64748b;font-size:13px;">Ваши автомобили из СТО — только просмотр</div></div>
+                <button class="btn-secondary" onclick="closeSanechkaServiceModal()">✕</button>
+            </div>
+            <div id="sanechkaServiceStatus" class="status" style="display:none;"></div>
+            <div id="sanechkaServiceVehicles">Загружаем автомобили...</div>
+            <div id="sanechkaServiceHistory" class="sanechka-service-history" style="display:none;">
+                <button class="btn-secondary sanechka-service-back" onclick="showSanechkaServiceVehicles()">← К автомобилям</button>
+                <div id="sanechkaServiceHistoryTitle" style="font-size:20px;font-weight:900;margin-bottom:10px;"></div>
+                <div id="sanechkaServiceHistoryList"></div>
             </div>
         </div>
-
-        <div class="sanechka-note">
-            Все введённые данные будут привязаны к выбранному арендному автомобилю.
-            Сейчас это первый этап интерфейса — дальнейший функционал добавим отдельно.
-        </div>
     </div>
-</div>
 
     <div id="kickSceneBg" class="kick-scene-bg" aria-hidden="true">
         <div class="kick-scene">
@@ -3067,7 +2989,8 @@ function applyUserInterfaceMode() {
         "clientModalBg",
         "addVehicleModalBg",
         "serviceModalBg",
-        "vehicleModalBg"
+        "vehicleModalBg",
+        "sanechkaServiceModalBg"
     ];
 
     if (sanechka) {
@@ -3077,32 +3000,6 @@ function applyUserInterfaceMode() {
         });
     }
 
-    if (sanechka) {
-        // Здесь только уже разрешённые RPC-данные. clients/vehicles из СТО
-        // для этого аккаунта не используются.
-        const eligible = rentalVehicles || [];
-        const iveco = eligible.find(v => {
-            const text = ((v.make || "") + " " + (v.model || "")).toLowerCase();
-            return text.includes("iveco");
-        }) || eligible[0];
-
-        const title = document.getElementById("sanechkaVehicleTitle");
-        const meta = document.getElementById("sanechkaVehicleMeta");
-
-        if (!iveco) {
-            if (title) title.textContent = "🚚 Арендный автомобиль";
-            if (meta) meta.textContent = "Арендный автомобиль пока не назначен.";
-            return;
-        }
-
-        if (title) {
-            title.textContent = [iveco.make, iveco.model].filter(Boolean).join(" ") || "🚚 Арендный автомобиль";
-        }
-
-        const parts = [];
-        if (iveco.plate) parts.push("Госномер: " + iveco.plate);
-        if (iveco.current_mileage != null) parts.push("Пробег: " + Number(iveco.current_mileage).toLocaleString("ru-RU") + " км");
-        if (meta) meta.textContent = parts.join(" · ") || "Автомобиль готов к работе.";
     }
 }
 
@@ -3148,8 +3045,6 @@ async function loadSanechkaRentalData() {
             "автомобилей:",
             rentalVehicles.length
         );
-
-        await renderSanechkaTripHistory();
     } catch (error) {
         console.error("Ошибка загрузки кабинета аренды:", error);
         rentalVehicles = [];
@@ -3306,6 +3201,65 @@ async function saveCloudRentalRecord(vehicleId, record) {
     });
 }
 
+
+/* =====================================================
+   САНЕЧКА — ПРОСМОТР ОБСЛУЖИВАНИЯ
+===================================================== */
+let sanechkaServiceVehicles = [];
+
+function showSanechkaServiceStatus(message,error=false){
+    const el=document.getElementById("sanechkaServiceStatus"); if(!el)return;
+    if(!message){el.style.display="none";el.textContent="";el.classList.remove("error");return;}
+    el.style.display="block";el.classList.toggle("error",error);el.textContent=message;
+}
+async function openSanechkaServiceModal(){
+    if(!isSanechkaAccount())return;
+    const bg=document.getElementById("sanechkaServiceModalBg"); if(!bg)return;
+    bg.style.display="block";
+    document.getElementById("sanechkaServiceVehicles").style.display="block";
+    document.getElementById("sanechkaServiceHistory").style.display="none";
+    showSanechkaServiceStatus("Загружаем автомобили...");
+    try{
+        sanechkaServiceVehicles=await api("rpc/get_my_service_vehicles",{method:"POST",body:JSON.stringify({})});
+        if(!Array.isArray(sanechkaServiceVehicles))sanechkaServiceVehicles=[];
+        renderSanechkaServiceVehicles();showSanechkaServiceStatus("");
+    }catch(error){console.error(error);showSanechkaServiceStatus("Не удалось загрузить автомобили: "+error.message,true);}
+}
+function renderSanechkaServiceVehicles(){
+    const el=document.getElementById("sanechkaServiceVehicles");if(!el)return;
+    if(!sanechkaServiceVehicles.length){el.innerHTML='<div class="empty">В СТО пока не найдено автомобилей, доступных для просмотра.</div>';return;}
+    el.innerHTML=sanechkaServiceVehicles.map(v=>{
+        const title=[v.make,v.model].filter(Boolean).join(" ")||"Автомобиль",meta=[];
+        if(v.plate)meta.push("Госномер: "+escapeHtml(v.plate));
+        if(v.vin)meta.push("VIN: "+escapeHtml(v.vin));
+        if(v.year)meta.push("Год: "+escapeHtml(String(v.year)));
+        if(v.engine)meta.push("Двигатель: "+escapeHtml(v.engine));
+        if(v.current_mileage!=null)meta.push("Пробег: "+Number(v.current_mileage).toLocaleString("ru-RU")+" км");
+        const id=String(v.id).replace(/'/g,"\\'");
+        return '<div class="sanechka-service-vehicle" onclick="openSanechkaServiceHistory(\\''+id+'\\')"><div class="sanechka-service-vehicle-title">🚗 '+escapeHtml(title)+'</div><div class="sanechka-service-vehicle-meta">'+(meta.join(" · ")||"Нажмите, чтобы открыть историю обслуживания")+'</div></div>';
+    }).join("");
+}
+function showSanechkaServiceVehicles(){
+    document.getElementById("sanechkaServiceVehicles").style.display="block";
+    document.getElementById("sanechkaServiceHistory").style.display="none";
+    showSanechkaServiceStatus("");
+}
+async function openSanechkaServiceHistory(vehicleId){
+    const vehicle=sanechkaServiceVehicles.find(v=>String(v.id)===String(vehicleId));if(!vehicle)return;
+    document.getElementById("sanechkaServiceVehicles").style.display="none";
+    document.getElementById("sanechkaServiceHistory").style.display="block";
+    const title=document.getElementById("sanechkaServiceHistoryTitle"),list=document.getElementById("sanechkaServiceHistoryList");
+    title.textContent=[vehicle.make,vehicle.model].filter(Boolean).join(" ")+(vehicle.plate?" · "+vehicle.plate:"");
+    list.innerHTML='<div class="empty">Загружаем историю обслуживания...</div>';
+    try{
+        const result=await api("rpc/get_my_service_history",{method:"POST",body:JSON.stringify({p_vehicle_id:vehicle.id})});
+        const payload=Array.isArray(result)?result[0]:result,services=payload&&Array.isArray(payload.services)?payload.services:[],items=payload&&Array.isArray(payload.items)?payload.items:[],parts=payload&&Array.isArray(payload.parts)?payload.parts:[];
+        const ib={},pb={};items.forEach(x=>(ib[x.service_id]||=[]).push(x));parts.forEach(x=>(pb[x.service_id]||=[]).push(x));
+        if(!services.length){list.innerHTML='<div class="empty">История обслуживания пока пустая.</div>';return;}
+        list.innerHTML=services.map(s=>renderService(s,ib[s.id]||[],pb[s.id]||[])).join("");
+    }catch(error){console.error(error);list.innerHTML='<div class="status error">Не удалось загрузить историю: '+escapeHtml(error.message)+'</div>';}
+}
+function closeSanechkaServiceModal(){const bg=document.getElementById("sanechkaServiceModalBg");if(bg)bg.style.display="none";}
 
 /* =====================================================
    АРЕНДА
