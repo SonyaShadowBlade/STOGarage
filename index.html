@@ -4469,6 +4469,7 @@ function renderService(
 ) {
 
     const totals = {};
+    const readOnly = isSanechkaAccount();
 
 
     items.forEach(item => {
@@ -4641,6 +4642,7 @@ function renderService(
                     "
                 >
 
+                    ${readOnly ? "" : `
                     <button
                         class="btn-primary small-button"
                         onclick="editService(
@@ -4659,6 +4661,7 @@ function renderService(
                     >
                         🗑 Удалить
                     </button>
+                    `}
 
                 </div>
 
@@ -4767,6 +4770,7 @@ function renderService(
                                 </div>
 
 
+                                ${readOnly ? "" : `
                                 <button
                                     class="btn-danger small-button"
                                     onclick="deleteWork(
@@ -4776,6 +4780,7 @@ function renderService(
                                 >
                                     Удалить
                                 </button>
+                                `}
 
                             </div>
 
@@ -4794,6 +4799,7 @@ function renderService(
                 }
 
 
+                ${readOnly ? "" : `
                 <button
                     class="btn-success small-button"
                     style="margin-top:8px;"
@@ -4803,6 +4809,7 @@ function renderService(
                 >
                     ＋ Добавить работу
                 </button>
+                `}
 
             </div>
 
@@ -4872,6 +4879,7 @@ function renderService(
                                 </div>
 
 
+                                ${readOnly ? "" : `
                                 <button
                                     class="btn-danger small-button"
                                     onclick="deletePart(
@@ -4881,6 +4889,7 @@ function renderService(
                                 >
                                     Удалить
                                 </button>
+                                `}
 
                             </div>
 
@@ -4899,6 +4908,7 @@ function renderService(
                 }
 
 
+                ${readOnly ? "" : `
                 <button
                     class="btn-success small-button"
                     style="margin-top:8px;"
@@ -4908,6 +4918,7 @@ function renderService(
                 >
                     ＋ Добавить запчасть
                 </button>
+                `}
 
             </div>
 
