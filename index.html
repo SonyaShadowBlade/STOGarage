@@ -8135,7 +8135,11 @@ async function runStartup() {
         }, 1000);
     }
 
-    checkForProgramUpdate();
+    const userRole = String(sanechkaRentalProfile && sanechkaRentalProfile.role || "").toLowerCase();
+    const shouldCheckProgramUpdate = !isSanechkaAccount() && (userRole === "admin" || userRole === "father");
+    if (shouldCheckProgramUpdate) {
+        checkForProgramUpdate();
+    }
 }
 
 runStartup();
