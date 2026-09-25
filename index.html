@@ -8245,10 +8245,14 @@ async function runStartup() {
         }, 1000);
     }
 
+    // Для кабинета Санечки проверку автообновления не запускаем:
+    // она может перезагружать страницу прямо во время входа и мешать
+    // открытию его отдельного кабинета.
+    if (isSanechkaAccount()) {
+        return;
+    }
+
     const userRole = String(sanechkaRentalProfile && sanechkaRentalProfile.role || "").toLowerCase();
-    // Все пользователи автоматически проверяют версию.
-    // Окно проверки при входе показывается только admin/father;
-    // при устаревшей версии окно всё равно появляется для любого пользователя.
     const isStaff = userRole === "admin" || userRole === "father";
     checkForProgramUpdate(isStaff);
 }
