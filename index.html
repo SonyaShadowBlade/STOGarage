@@ -8137,6 +8137,12 @@ async function runStartup() {
                 body: JSON.stringify({})
             }
         );
+
+        // Supabase RPC возвращает TABLE как массив строк.
+        // Для проверки роли нам нужен первый профиль.
+        if (Array.isArray(sanechkaRentalProfile)) {
+            sanechkaRentalProfile = sanechkaRentalProfile[0] || null;
+        }
     } catch (error) {
         sanechkaRentalProfile = null;
         console.warn("Не удалось определить роль пользователя:", error);
