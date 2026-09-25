@@ -1860,7 +1860,7 @@ async function checkVersionNow() {
     }
 }
 
-async function checkForProgramUpdate(manualCheck = false) {
+async async function checkForProgramUpdate(manualCheck = false) {
     // При автоматической проверке окно показываем только если найдена новая версия.
     if (manualCheck) {
         showVersionCheck("Проверяем актуальность программы...");
@@ -2808,7 +2808,7 @@ function allowedCurrency(
    ЗАГРУЗКА ДАННЫХ
 ===================================================== */
 
-async function loadData() {
+async async function loadData() {
 
     // Санечка не должен обращаться к clients/vehicles/services напрямую.
     // Его кабинет получает только назначенные арендные автомобили через
@@ -3002,7 +3002,7 @@ function applyUserInterfaceMode() {
 }
 
 
-async function loadSanechkaRentalData() {
+async async function loadSanechkaRentalData() {
     try {
         sanechkaRentalProfile = await api(
             "rpc/get_my_rental_profile",
@@ -3210,7 +3210,7 @@ function showSanechkaServiceStatus(message,error=false){
     if(!message){el.style.display="none";el.textContent="";el.classList.remove("error");return;}
     el.style.display="block";el.classList.toggle("error",error);el.textContent=message;
 }
-async function openSanechkaServiceModal(){
+async async function openSanechkaServiceModal(){
     if(!isSanechkaAccount())return;
     const bg=document.getElementById("sanechkaServiceModalBg"); if(!bg)return;
     bg.style.display="block";
@@ -8179,7 +8179,7 @@ function kickEngineer() {
    ДИАГНОСТИКА И ЗАПУСК ПРОГРАММЫ
 ===================================================== */
 
-async function runStartup() {
+async async function runStartup() {
     if (restoreRecoverySession()) {
         return;
     }
