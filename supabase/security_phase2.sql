@@ -125,6 +125,8 @@ revoke all on function public.get_my_rental_profile() from public;
 grant execute on function public.get_my_rental_profile() to authenticated;
 
 -- Give Sanечке the first Iveco found, but only if he has no assignment yet.
+-- vehicles has no "name" column in the current STOGarage schema,
+-- so identify the vehicle by make/model only.
 -- This avoids creating multiple assignments on repeated runs.
 insert into public.rental_vehicle_access (user_id, vehicle_id)
 select u.id, v.id
@@ -134,8 +136,7 @@ cross join lateral (
   from public.vehicles
   where lower(
     coalesce(make,'') || ' ' ||
-    coalesce(model,'') || ' ' ||
-    coalesce(name,'')
+    coalesce(model,'')
   ) like '%iveco%'
   order by created_at asc nulls last
   limit 1
