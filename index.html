@@ -1705,22 +1705,15 @@ function closeChangelog() {
 }
 
 async function checkVersionNow() {
-    const reloadKey = "sto_manual_version_reload";
-    const alreadyReloaded = sessionStorage.getItem(reloadKey) === "1";
-
-    if (alreadyReloaded) {
-        sessionStorage.removeItem(reloadKey);
-        showVersionCheck("Проверка завершена. Страница уже была обновлена один раз.", true);
-        setTimeout(closeVersionCheck, 1800);
-        return;
-    }
-
     showVersionCheck("Проверяем актуальность программы...");
 
     try {
         const response = await fetch("version.json?check=" + Date.now(), {
             cache: "no-store",
-            headers: {"Cache-Control": "no-cache", "Pragma": "no-cache"}
+            headers: {
+                "Cache-Control": "no-cache",
+                "Pragma": "no-cache"
+            }
         });
 
         if (!response.ok) {
@@ -1738,20 +1731,16 @@ async function checkVersionNow() {
             return;
         }
 
-        sessionStorage.setItem(reloadKey, "1");
-        showVersionCheck(
-            "GitHub: " + remoteVersion + ". Обновляем страницу один раз...",
-            false
-        );
+        if (remoteVersion === APP_VERSION) {
+            showVersionCheck("✅ Версия актуальна: " + APP_VERSION, true);
+        } else {
+            showVersionCheck(
+                "GitHub: " + remoteVersion + " | Загружена: " + APP_VERSION,
+                true
+            );
+        }
 
-        setTimeout(() => {
-            const freshUrl =
-                window.location.origin +
-                window.location.pathname +
-                "?refresh=" + Date.now();
-
-            window.location.replace(freshUrl);
-        }, 500);
+        setTimeout(closeVersionCheck, 2200);
 
     } catch (error) {
         console.warn("Не удалось проверить версию:", error);
