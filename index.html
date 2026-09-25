@@ -3046,6 +3046,9 @@ async function loadSanechkaRentalData() {
                 body: JSON.stringify({})
             }
         );
+        if (Array.isArray(sanechkaRentalProfile)) {
+            sanechkaRentalProfile = sanechkaRentalProfile[0] || null;
+        }
 
         rentalVehicles = await api(
             "rpc/get_my_rental_vehicles",
