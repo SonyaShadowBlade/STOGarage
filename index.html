@@ -3371,14 +3371,20 @@ function openRentalModal(){
     select.innerHTML = eligible.length
         ? eligible.map(v => {
             const title = [v.make, v.model].filter(Boolean).join(" ") || "Транспорт";
-            let ownerName = "";
+            const details = [];
 
+            if (v.plate) details.push(v.plate);
+            if (v.year) details.push(String(v.year));
+            if (v.engine) details.push(v.engine);
+
+            let ownerName = "";
             if (!isSanechkaAccount()) {
                 const owner = clients.find(c => c.id === v.client_id);
                 ownerName = owner && owner.name ? " — " + owner.name : "";
             }
 
-            return '<option value="' + v.id + '">' + escapeHtml(title + ownerName) + '</option>';
+            const display = [title, ...details].join(" | ") + ownerName;
+            return '<option value="' + v.id + '">' + escapeHtml(display) + '</option>';
         }).join("")
         : '<option value="">Назначенный автомобиль не найден</option>';
 
