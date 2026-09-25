@@ -855,6 +855,7 @@
     .sanechka-main-button { width:100%; min-height:120px; border-radius:20px; font-size:27px; font-weight:900; box-shadow:0 8px 24px rgba(0,0,0,.10); }
     .sanechka-service-button { background:#2563eb; color:white; }
     .sanechka-rental-button { background:#0f766e; color:white; }
+    .sanechka-update-button { width:100%; margin-top:4px; font-size:16px; font-weight:800; }
     .sanechka-readonly-note { margin-top:16px; padding:12px 14px; border-radius:12px; background:#f8fafc; color:#64748b; font-size:13px; line-height:1.5; text-align:center; }
     .sanechka-service-vehicle { border:1px solid #e5e7eb; border-radius:12px; padding:14px; margin-top:10px; background:#fff; cursor:pointer; }
     .sanechka-service-vehicle:hover { background:#f8fafc; }
@@ -1007,6 +1008,7 @@
     <div class="sanechka-main-buttons">
         <button class="sanechka-main-button sanechka-service-button" onclick="openSanechkaServiceModal()">🔧 Обслуживание</button>
         <button class="sanechka-main-button sanechka-rental-button" onclick="openRentalModal()">🚚 Аренда</button>
+        <button class="btn-secondary sanechka-update-button" onclick="checkVersionNow()">ℹ️ Проверить версию</button>
     </div>
     <div class="sanechka-readonly-note">«Обслуживание» — только просмотр. Редактирование и удаление недоступны.</div>
 </div>
@@ -1661,7 +1663,7 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.16";
+const APP_VERSION = "0.3.17";
 
 function showVersionCheck(text, success = false) {
     const bg = document.getElementById("versionCheckBg");
@@ -3289,12 +3291,56 @@ async function openSanechkaServiceHistory(vehicleId){
     document.getElementById("sanechkaServiceVehicles").style.display="none";
     document.getElementById("sanechkaServiceHistory").style.display="block";
     const title=document.getElementById("sanechkaServiceHistoryTitle"),list=document.getElementById("sanechkaServiceHistoryList");
-    title.textContent=[vehicle.make,vehicle.model].filter(Boolean).join(" ")+(vehicle.plate?" · "+vehicle.plate:"");
+    title.innerHTML='<div style="font-size:20px;font-weight:900;">'+escapeHtml([vehicle.make,vehicle.model].filter(Boolean).join(" ")||"Автомобиль")+(vehicle.plate?' · '+escapeHtml(vehicle.plate):'')+'</div><div class="vehicle-investment-total" style="margin-top:12px;"><span>Сколько уже вложено в это</span><img class="rusty-bucket" src="https://commons.wikimedia.org/wiki/Special:Redirect/file/Rust_bucket_-_geograph.org.uk_-_7144016.jpg" alt="Большое ржавое дырявое ведро" title="Большое ржавое дырявое ведро"><strong id="sanechkaVehicleInvestmentAmount">0.00 BYN</strong></div>';
     list.innerHTML='<div class="empty">Загружаем историю обслуживания...</div>';
     try{
         const result=await api("rpc/get_my_service_history",{method:"POST",body:JSON.stringify({p_vehicle_id:vehicle.id})});
         const payload=Array.isArray(result)?result[0]:result,services=payload&&Array.isArray(payload.services)?payload.services:[],items=payload&&Array.isArray(payload.items)?payload.items:[],parts=payload&&Array.isArray(payload.parts)?payload.parts:[];
         const ib={},pb={};items.forEach(x=>(ib[x.service_id]||=[]).push(x));parts.forEach(x=>(pb[x.service_id]||=[]).push(x));
+
+        const investmentTotals = {};
+        const addInvestment = row => {
+            if (!row || row.name === "__SERVICE_WORK_SUMMARY__" || row.name === "__SERVICE_PART_SUMMARY__") {
+                if (!row) return;
+                const currency = allowedCurrency(row.currency) ? row.currency : "BYN";
+                const storedTotal = Number(row.total_price);
+                const quantity = Number(row.quantity || 0);
+                const unitPrice = Number(row.price || 0);
+                const calculatedTotal = quantity * unitPrice;
+                const value = Number.isFinite(storedTotal) && storedTotal > 0 ? storedTotal : calculatedTotal;
+                if (Number.isFinite(value) && value > 0) {
+                    investmentTotals[currency] = (investmentTotals[currency] || 0) + value;
+                }
+                return;
+            }
+
+            const currency = allowedCurrency(row.currency) ? row.currency : "BYN";
+            const storedTotal = Number(row.total_price);
+            const quantity = Number(row.quantity || 0);
+            const unitPrice = Number(row.price || 0);
+            const calculatedTotal = quantity * unitPrice;
+            const value = Number.isFinite(storedTotal) && storedTotal > 0 ? storedTotal : calculatedTotal;
+
+            if (Number.isFinite(value) && value > 0) {
+                investmentTotals[currency] = (investmentTotals[currency] || 0) + value;
+            }
+        };
+
+        items.forEach(addInvestment);
+        parts.forEach(addInvestment);
+
+        const currencyOrder = ["BYN","EUR","USD","RUB"];
+        const entries = currencyOrder
+            .filter(currency => Number(investmentTotals[currency] || 0) > 0)
+            .map(currency => Number(investmentTotals[currency]).toFixed(2) + " " + currencySymbol(currency));
+
+        const investmentAmount = document.getElementById("sanechkaVehicleInvestmentAmount");
+        if (investmentAmount) {
+            investmentAmount.textContent = entries.length
+                ? entries.map(entry => entry.replace(" Br", " BYN")).join(" + ")
+                : "0.00 BYN";
+        }
+
         if(!services.length){list.innerHTML='<div class="empty">История обслуживания пока пустая.</div>';return;}
         list.innerHTML=services.map(s=>renderService(s,ib[s.id]||[],pb[s.id]||[])).join("");
     }catch(error){console.error(error);list.innerHTML='<div class="status error">Не удалось загрузить историю: '+escapeHtml(error.message)+'</div>';}
