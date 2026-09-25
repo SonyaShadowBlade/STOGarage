@@ -1732,15 +1732,23 @@ async function checkVersionNow() {
         }
 
         if (remoteVersion === APP_VERSION) {
-            showVersionCheck("✅ Версия актуальна: " + APP_VERSION, true);
+            showVersionCheck("✅ Версия актуальна: " + APP_VERSION + ". Обновляем страницу...", false);
         } else {
             showVersionCheck(
-                "GitHub: " + remoteVersion + " | Загружена: " + APP_VERSION,
-                true
+                "GitHub: " + remoteVersion + " | Загружена: " + APP_VERSION + ". Обновляем страницу...",
+                false
             );
         }
 
-        setTimeout(closeVersionCheck, 2200);
+        setTimeout(() => {
+            const freshUrl =
+                window.location.origin +
+                window.location.pathname +
+                "?refresh=" +
+                Date.now();
+
+            window.location.replace(freshUrl);
+        }, 700);
 
     } catch (error) {
         console.warn("Не удалось проверить версию:", error);
