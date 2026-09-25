@@ -3276,7 +3276,7 @@ function renderSanechkaServiceVehicles(){
         if(v.engine)meta.push("Двигатель: "+escapeHtml(v.engine));
         if(v.current_mileage!=null)meta.push("Пробег: "+Number(v.current_mileage).toLocaleString("ru-RU")+" км");
         const id=String(v.id).replace(/'/g,"\\'");
-        return '<div class="sanechka-service-vehicle" onclick="openSanechkaServiceHistory(\\''+id+'\\')"><div class="sanechka-service-vehicle-title">🚗 '+escapeHtml(title)+'</div><div class="sanechka-service-vehicle-meta">'+(meta.join(" · ")||"Нажмите, чтобы открыть историю обслуживания")+'</div></div>';
+        return "<div class=\"sanechka-service-vehicle\" onclick=\"openSanechkaServiceHistory('" + id + "')\"><div class=\"sanechka-service-vehicle-title\">🚗 " + escapeHtml(title) + "</div><div class=\"sanechka-service-vehicle-meta\">" + (meta.join(" · ") || "Нажмите, чтобы открыть историю обслуживания") + "</div></div>";
     }).join("");
 }
 function showSanechkaServiceVehicles(){
