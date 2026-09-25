@@ -8185,6 +8185,24 @@ async function runStartup() {
     authSession = stored;
     updateUserGreeting();
 
+    // Если сохранена сессия Санечки, показываем его кабинет НЕМЕДЛЕННО.
+    // Никаких ожиданий refreshAuthSession() и RPC перед отображением интерфейса.
+    if (isSanechkaAccount()) {
+        applyUserInterfaceMode();
+        showAuth(false);
+
+        // Обновление токена выполняем в фоне.
+        refreshAuthSession()
+            .then(() => loadSanechkaRentalData())
+            .catch(error => {
+                console.warn("Фоновое обновление сессии Санечки:", error);
+            });
+
+        // Проверка версии не должна блокировать отображение кабинета.
+        checkForProgramUpdate(false);
+        return;
+    }
+
     const refreshed = await refreshAuthSession();
 
     if (!refreshed && !authSession) {
@@ -8215,16 +8233,6 @@ async function runStartup() {
     }
 
     applyUserInterfaceMode();
-
-    // Для сохранённой сессии Санечки тоже не ждём загрузку основной базы.
-    // Его кабинет должен открыться сразу, а данные аренды подгружаются отдельно.
-    if (isSanechkaAccount()) {
-        await checkForProgramUpdate(false);
-        loadSanechkaRentalData().catch(error => {
-            console.warn("Фоновая загрузка аренды Санечки:", error);
-        });
-        return;
-    }
 
     try {
         await loadData();
