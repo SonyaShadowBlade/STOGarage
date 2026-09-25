@@ -977,6 +977,9 @@
             </div>
 
             <div id="backupStatus" class="auth-message" style="display:none;"></div>
+            <div id="latestBackupInfo" style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:14px;">
+                Проверяем состояние последней резервной копии...
+            </div>
 
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
                 <button class="btn-primary" id="backupDownloadButton" onclick="createBackupDownload()">
@@ -1563,7 +1566,7 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.14";
+const APP_VERSION = "0.3.15";
 
 function showVersionCheck(text, success = false) {
     const bg = document.getElementById("versionCheckBg");
@@ -6960,11 +6963,48 @@ async function runAutomaticBackupIfNeeded() {
     }
 }
 
-function openBackupModal() {
+async function openBackupModal() {
     const bg = document.getElementById("backupBg");
-    if (bg) {
-        bg.style.display = "flex";
-        showBackupStatus("", false);
+    if (!bg) return;
+
+    bg.style.display = "flex";
+    showBackupStatus("", false);
+
+    const info = document.getElementById("latestBackupInfo");
+    if (!info) return;
+
+    info.innerHTML = "⏳ Проверяем последнюю резервную копию...";
+
+    try {
+        const backup = await getLatestAutomaticBackup();
+
+        if (!backup) {
+            info.innerHTML = `
+                <strong>Последняя резервная копия:</strong> пока нет данных.<br>
+                <span style="color:#b45309;">⚠️ Резервная копия ещё не создавалась.</span>
+            `;
+            return;
+        }
+
+        const date = backup.created_at
+            ? new Date(backup.created_at).toLocaleString("ru-RU")
+            : "дата неизвестна";
+
+        const ok = backup.verified === true;
+
+        info.innerHTML = `
+            <strong>Последняя резервная копия:</strong> ${escapeHtml(date)}<br>
+            <strong>Проверка:</strong>
+            ${ok
+                ? '<span style="color:#15803d;font-weight:700;">✅ ПРОВЕРЕНА — ВСЁ ОК</span>'
+                : '<span style="color:#b91c1c;font-weight:700;">❌ ПРОВЕРКА НЕ ПРОЙДЕНА</span>'}
+        `;
+    } catch (error) {
+        console.error("Ошибка проверки статуса резервной копии:", error);
+        info.innerHTML = `
+            <strong>Последняя резервная копия:</strong> не удалось определить.<br>
+            <span style="color:#b91c1c;font-weight:700;">❌ Не удалось проверить состояние резервной копии</span>
+        `;
     }
 }
 
