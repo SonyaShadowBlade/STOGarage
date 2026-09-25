@@ -2324,6 +2324,10 @@ async function login(event) {
         });
 
         const remember = document.getElementById("rememberMe").checked;
+        // Сохраняем email входа явно: это также надёжно определяет
+        // специальный кабинет Санечки даже при нестандартном ответе Auth.
+        session.user = session.user || {};
+        session.user.email = email.toLowerCase();
         saveSession(session, remember);
         document.getElementById("authPassword").value = "";
         updateUserGreeting();
@@ -2954,9 +2958,30 @@ async function loadSuggestions() {
 const SANECHKA_EMAIL = "michnin.aleksandr.1@gmail.com";
 
 function isSanechkaAccount() {
-    const email = String(authSession && authSession.user && authSession.user.email || "")
-        .trim().toLowerCase();
-    return email === SANECHKA_EMAIL;
+    const currentEmail = String(
+        authSession &&
+        authSession.user &&
+        authSession.user.email || ""
+    ).trim().toLowerCase();
+
+    if (currentEmail === SANECHKA_EMAIL) {
+        return true;
+    }
+
+    // Защита от ситуации, когда сохранённая Supabase-сессия
+    // загрузилась без user.email в текущем объекте.
+    try {
+        const stored = getStoredSession();
+        const storedEmail = String(
+            stored &&
+            stored.user &&
+            stored.user.email || ""
+        ).trim().toLowerCase();
+
+        return storedEmail === SANECHKA_EMAIL;
+    } catch (error) {
+        return false;
+    }
 }
 
 function applyUserInterfaceMode() {
