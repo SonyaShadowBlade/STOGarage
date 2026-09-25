@@ -1020,6 +1020,10 @@
             👨‍🔧 Пнуть инженера
         </button>
 
+        <button class="btn-secondary" onclick="testSecurityAccess()">
+            🔐 Проверить защиту
+        </button>
+
         <button class="btn-secondary" onclick="openBackupModal()">
             💾 Резервная копия
         </button>
@@ -2627,6 +2631,42 @@ function setStatus(text, error = false) {
             : "status";
 }
 
+
+
+async function testSecurityAccess() {
+    const tables = [
+        "clients",
+        "vehicles",
+        "services",
+        "service_items",
+        "service_parts"
+    ];
+
+    const results = [];
+
+    for (const table of tables) {
+        try {
+            const rows = await api(
+                table + "?select=id&limit=1"
+            );
+
+            if (Array.isArray(rows) && rows.length === 0) {
+                results.push("🔒 " + table + ": доступ закрыт RLS (0 строк)");
+            } else {
+                results.push("⚠️ " + table + ": запрос прошёл, получена строка");
+            }
+        } catch (error) {
+            results.push("🔒 " + table + ": запрос отклонён");
+        }
+    }
+
+    const message =
+        "Проверка защиты завершена.\\n\\n" +
+        results.join("\\n") +
+        "\\n\\nДля аккаунта Санечки ожидается: все 5 таблиц должны быть закрыты.";
+
+    alert(message);
+}
 
 async function api(path, options = {}) {
 
