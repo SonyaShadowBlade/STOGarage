@@ -817,6 +817,50 @@
     .rental-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
     .rental-tab.active{background:#0f766e;color:white}
     @media(max-width:800px){.rental-summary{grid-template-columns:1fr 1fr}}
+
+    .sanechka-portal {
+        display: none;
+        max-width: 760px;
+        margin: 0 auto;
+    }
+    .sanechka-portal.visible { display: block; }
+    .sanechka-welcome {
+        background: #1f2937;
+        color: white;
+        border-radius: 16px;
+        padding: 22px;
+        margin-bottom: 16px;
+        box-shadow: 0 6px 20px rgba(0,0,0,.12);
+    }
+    .sanechka-welcome h1 { margin: 0 0 6px; font-size: 26px; }
+    .sanechka-welcome p { margin: 0; color: #d1d5db; }
+    .sanechka-vehicle {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 3px 14px rgba(0,0,0,.08);
+    }
+    .sanechka-vehicle-title {
+        font-size: 24px;
+        font-weight: 900;
+        margin-bottom: 6px;
+    }
+    .sanechka-vehicle-meta { color:#64748b; margin-bottom:18px; }
+    .sanechka-actions { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    .sanechka-actions button { min-height:58px; font-size:15px; font-weight:800; }
+    .sanechka-note {
+        margin-top:14px;
+        padding:12px;
+        border-radius:10px;
+        background:#f8fafc;
+        color:#64748b;
+        font-size:13px;
+        line-height:1.5;
+    }
+    @media(max-width:700px) {
+        .sanechka-actions { grid-template-columns:1fr; }
+    }
+
 </style>
 </head>
 
@@ -955,6 +999,32 @@
 </div>
 
 
+
+    
+<div id="sanechkaPortal" class="sanechka-portal">
+    <div class="sanechka-welcome">
+        <h1>🚚 Кабинет аренды</h1>
+        <p>Привет, Санечка! Здесь пока только управление арендой автомобиля.</p>
+    </div>
+
+    <div class="sanechka-vehicle">
+        <div class="sanechka-vehicle-title" id="sanechkaVehicleTitle">Ивеко</div>
+        <div class="sanechka-vehicle-meta" id="sanechkaVehicleMeta">
+            Загружаем данные автомобиля...
+        </div>
+
+        <div class="sanechka-actions">
+            <button class="rental-button" onclick="openRentalModal()">🛣 Поездки</button>
+            <button class="btn-primary" onclick="openRentalModal(); setTimeout(()=>showRentalTab('fuel'),50)">⛽ Заправка</button>
+            <button class="btn-danger" onclick="openRentalModal(); setTimeout(()=>showRentalTab('issue'),50)">⚠️ Проблема</button>
+        </div>
+
+        <div class="sanechka-note">
+            Все введённые данные будут привязаны к выбранному арендному автомобилю.
+            Сейчас это первый этап интерфейса — дальнейший функционал добавим отдельно.
+        </div>
+    </div>
+</div>
 
     <div id="kickSceneBg" class="kick-scene-bg" aria-hidden="true">
         <div class="kick-scene">
@@ -2246,6 +2316,7 @@ async function login(event) {
         updateUserGreeting();
         showAuth(false);
         await loadData();
+        applyUserInterfaceMode();
         await startRealtimeSync();
     } catch (error) {
         console.error("Ошибка входа:", error);
@@ -2437,6 +2508,7 @@ async function logout() {
     vehicles = [];
     renderClients();
     stopRealtimeSync();
+    applyUserInterfaceMode();
     showAuth(true);
     setStatus("Выполните вход в СТО.");
 }
@@ -2818,6 +2890,77 @@ async function loadSuggestions() {
 
     }
 
+}
+
+
+
+function isSanechkaAccount() {
+    const email = String(authSession && authSession.user && authSession.user.email || "")
+        .trim().toLowerCase();
+    const login = email.split("@")[0];
+    return login === "sanechka" || login.startsWith("sanechka.");
+}
+
+function applyUserInterfaceMode() {
+    const sanechka = isSanechkaAccount();
+    const mainContainer = document.querySelector("body > .container");
+    const portal = document.getElementById("sanechkaPortal");
+    const headerTitle = document.querySelector("header > span:first-child");
+
+    if (mainContainer) mainContainer.style.display = sanechka ? "none" : "";
+    if (portal) portal.classList.toggle("visible", sanechka);
+    if (headerTitle) {
+        headerTitle.textContent = sanechka ? "🚚 СТО — кабинет аренды" : "🚗 СТО — сервисная база";
+    }
+
+    const extraWindows = [
+        "backupBg",
+        "changelogBg",
+        "versionCheckBg",
+        "kickSceneBg",
+        "clientModalBg",
+        "addVehicleModalBg",
+        "serviceModalBg",
+        "vehicleModalBg"
+    ];
+
+    if (sanechka) {
+        extraWindows.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = "none";
+        });
+    }
+
+    if (sanechka) {
+        const eligible = vehicles.filter(v => {
+            const text = ((v.make || "") + " " + (v.model || "") + " " + (v.name || "")).toLowerCase();
+            return text.includes("iveco") || text.includes("boro") || text.includes("боро") || text.includes("прицеп");
+        });
+        const iveco = eligible.find(v => {
+            const text = ((v.make || "") + " " + (v.model || "")).toLowerCase();
+            return text.includes("iveco");
+        }) || eligible[0];
+
+        const title = document.getElementById("sanechkaVehicleTitle");
+        const meta = document.getElementById("sanechkaVehicleMeta");
+
+        if (!iveco) {
+            if (title) title.textContent = "🚚 Арендный автомобиль";
+            if (meta) meta.textContent = "Ивеко пока не найдено в базе.";
+            return;
+        }
+
+        if (title) {
+            title.textContent = [iveco.make, iveco.model].filter(Boolean).join(" ") || "🚚 Арендный автомобиль";
+        }
+
+        const owner = clients.find(c => c.id === iveco.client_id);
+        const parts = [];
+        if (iveco.plate) parts.push("Госномер: " + iveco.plate);
+        if (iveco.current_mileage != null) parts.push("Пробег: " + Number(iveco.current_mileage).toLocaleString("ru-RU") + " км");
+        if (owner && owner.name) parts.push("Владелец: " + owner.name);
+        if (meta) meta.textContent = parts.join(" · ") || "Автомобиль готов к работе.";
+    }
 }
 
 
@@ -7646,9 +7789,11 @@ async function runStartup() {
     }
 
     showAuth(false);
+    applyUserInterfaceMode();
 
     try {
         await loadData();
+        applyUserInterfaceMode();
     } catch (error) {
         console.error("Ошибка загрузки СТО:", error);
     }
