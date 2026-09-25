@@ -2332,10 +2332,30 @@ async function login(event) {
         document.getElementById("authPassword").value = "";
         updateUserGreeting();
 
-        // Санечка получает отдельный кабинет сразу после входа.
-        // Не ждём загрузку основной базы СТО и не делаем лишние RPC:
-        // core-таблицы для него закрыты RLS, а две кнопки должны появиться
-        // независимо от состояния этих запросов.
+        // Сначала определяем роль через защищённый RPC. Это надёжнее,
+        // чем полагаться только на email из объекта Auth.
+        // Ограничиваем ожидание, чтобы вход никогда не зависал из-за сети.
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
+            sanechkaRentalProfile = await api(
+                "rpc/get_my_rental_profile",
+                {
+                    method: "POST",
+                    body: JSON.stringify({}),
+                    signal: controller.signal
+                }
+            );
+            clearTimeout(timeoutId);
+            if (Array.isArray(sanechkaRentalProfile)) {
+                sanechkaRentalProfile = sanechkaRentalProfile[0] || null;
+            }
+        } catch (error) {
+            sanechkaRentalProfile = null;
+            console.warn("Не удалось определить роль после входа:", error);
+        }
+
+        // Теперь интерфейс выбирается уже по email ИЛИ роли renter.
         applyUserInterfaceMode();
         showAuth(false);
 
@@ -2968,8 +2988,15 @@ function isSanechkaAccount() {
         return true;
     }
 
-    // Защита от ситуации, когда сохранённая Supabase-сессия
-    // загрузилась без user.email в текущем объекте.
+    const role = String(
+        sanechkaRentalProfile &&
+        sanechkaRentalProfile.role || ""
+    ).trim().toLowerCase();
+
+    if (role === "renter" || role === "rental") {
+        return true;
+    }
+
     try {
         const stored = getStoredSession();
         const storedEmail = String(
@@ -8210,8 +8237,31 @@ async function runStartup() {
     authSession = stored;
     updateUserGreeting();
 
-    // Если сохранена сессия Санечки, показываем его кабинет НЕМЕДЛЕННО.
-    // Никаких ожиданий refreshAuthSession() и RPC перед отображением интерфейса.
+    // Если сохранён email Санечки — кабинет показываем сразу.
+    // Если email в сохранённой сессии отсутствует, дополнительно определяем
+    // роль через защищённый RPC с коротким таймаутом.
+    if (!isSanechkaAccount()) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
+            sanechkaRentalProfile = await api(
+                "rpc/get_my_rental_profile",
+                {
+                    method: "POST",
+                    body: JSON.stringify({}),
+                    signal: controller.signal
+                }
+            );
+            clearTimeout(timeoutId);
+            if (Array.isArray(sanechkaRentalProfile)) {
+                sanechkaRentalProfile = sanechkaRentalProfile[0] || null;
+            }
+        } catch (error) {
+            sanechkaRentalProfile = null;
+            console.warn("Не удалось определить роль сохранённой сессии:", error);
+        }
+    }
+
     if (isSanechkaAccount()) {
         applyUserInterfaceMode();
         showAuth(false);
