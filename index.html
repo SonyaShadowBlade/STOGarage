@@ -1098,45 +1098,54 @@
 
         </div>
 
-        <h3>Автомобиль</h3>
+        <div id="newClientVehicleSection">
 
-        <div class="grid-2">
+            <h3>Автомобиль</h3>
 
-            <div class="field">
-                <label>Марка</label>
-                <input id="vehicleMake">
+            <div class="grid-2">
+
+                <div class="field">
+                    <label>Марка</label>
+                    <input id="vehicleMake">
+                </div>
+
+                <div class="field">
+                    <label>Модель</label>
+                    <input id="vehicleModel">
+                </div>
+
+                <div class="field">
+                    <label>Госномер</label>
+                    <input id="vehiclePlate" type="text" autocomplete="off" oninput="sanitizePlate(this)" placeholder="Например ABC123">
+                </div>
+
+                <div class="field">
+                    <label>VIN</label>
+                    <div id="vehicleVinFields"><div class="vin-row" style="display:flex;gap:8px;margin-bottom:8px;"><input id="vehicleVin" class="vehicle-vin-input" type="text" autocomplete="off" oninput="sanitizeVin(this)" placeholder="VIN"></div></div><button type="button" class="btn-secondary small-button" onclick="addVinField()">＋ Добавить VIN</button>
+                </div>
+
+                <div class="field">
+                    <label>Год</label>
+                    <input id="vehicleYear" type="number">
+                </div>
+
+                <div class="field">
+                    <label>Двигатель</label>
+                    <input id="vehicleEngine">
+                </div>
+
+                <div class="field">
+                    <label>Текущий пробег</label>
+                    <input id="vehicleMileage" type="number">
+                </div>
+
             </div>
 
-            <div class="field">
-                <label>Модель</label>
-                <input id="vehicleModel">
-            </div>
+        </div>
 
-            <div class="field">
-                <label>Госномер</label>
-                <input id="vehiclePlate" type="text" autocomplete="off" oninput="sanitizePlate(this)" placeholder="Например ABC123">
-            </div>
-
-            <div class="field">
-                <label>VIN</label>
-                <div id="vehicleVinFields"><div class="vin-row" style="display:flex;gap:8px;margin-bottom:8px;"><input id="vehicleVin" class="vehicle-vin-input" type="text" autocomplete="off" oninput="sanitizeVin(this)" placeholder="VIN"></div></div><button type="button" class="btn-secondary small-button" onclick="addVinField()">＋ Добавить VIN</button>
-            </div>
-
-            <div class="field">
-                <label>Год</label>
-                <input id="vehicleYear" type="number">
-            </div>
-
-            <div class="field">
-                <label>Двигатель</label>
-                <input id="vehicleEngine">
-            </div>
-
-            <div class="field">
-                <label>Текущий пробег</label>
-                <input id="vehicleMileage" type="number">
-            </div>
-
+        <div id="editClientVehiclesSection" style="display:none;">
+            <h3>Автомобили клиента</h3>
+            <div id="editClientVehiclesList"></div>
         </div>
 
         <div class="form-buttons">
@@ -1554,7 +1563,7 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.12";
+const APP_VERSION = "0.3.13";
 
 function showVersionCheck(text, success = false) {
     const bg = document.getElementById("versionCheckBg");
@@ -3247,6 +3256,10 @@ function openClientModal() {
     document.getElementById("clientPhone").value = "";
     document.getElementById("clientEmail").value = "";
     document.getElementById("clientNotes").value = "";
+
+    document.getElementById("newClientVehicleSection").style.display = "block";
+    document.getElementById("editClientVehiclesSection").style.display = "none";
+
     document.getElementById("vehicleMake").value = "";
     document.getElementById("vehicleModel").value = "";
     document.getElementById("vehiclePlate").value = "";
@@ -3267,31 +3280,43 @@ function openEditClientModal(id) {
     document.getElementById("clientEmail").value = client.email || "";
     document.getElementById("clientNotes").value = client.notes || "";
 
-    const clientVehicle =
-        vehicles.find(
-            v => v.client_id === id
-        );
+    document.getElementById("newClientVehicleSection").style.display = "none";
+    document.getElementById("editClientVehiclesSection").style.display = "block";
 
-    document.getElementById("vehicleMake").value =
-        clientVehicle?.make || "";
+    const clientVehicles = vehicles.filter(v => v.client_id === id);
+    const list = document.getElementById("editClientVehiclesList");
 
-    document.getElementById("vehicleModel").value =
-        clientVehicle?.model || "";
+    if (!clientVehicles.length) {
+        list.innerHTML = '<div style="color:#777; padding:10px 0;">У клиента пока нет автомобилей.</div>';
+    } else {
+        list.innerHTML = clientVehicles.map(vehicle => {
+            const title = [vehicle.make, vehicle.model].filter(Boolean).join(" ");
+            const details = [
+                vehicle.plate ? "Госномер: " + escapeHtml(vehicle.plate) : "",
+                vehicle.vin ? "VIN: " + escapeHtml(vehicle.vin) : "",
+                vehicle.year ? "Год: " + escapeHtml(String(vehicle.year)) : "",
+                vehicle.engine ? "Двигатель: " + escapeHtml(vehicle.engine) : "",
+                vehicle.current_mileage != null ? "Пробег: " + escapeHtml(String(vehicle.current_mileage)) : ""
+            ].filter(Boolean);
 
-    document.getElementById("vehiclePlate").value =
-        clientVehicle?.plate || "";
-
-    document.getElementById("vehicleVin").value =
-        clientVehicle?.vin || "";
-
-    document.getElementById("vehicleYear").value =
-        clientVehicle?.year || "";
-
-    document.getElementById("vehicleEngine").value =
-        clientVehicle?.engine || "";
-
-    document.getElementById("vehicleMileage").value =
-        clientVehicle?.current_mileage ?? "";
+            return `
+                <div class="vehicle-card" style="margin-bottom:12px;">
+                    <div class="vehicle-title">🚗 ${escapeHtml(title || "Автомобиль")}</div>
+                    <div class="vehicle-info">
+                        ${details.length ? details.map(d => "<div>" + d + "</div>").join("") : "<div style='color:#777;'>Данные автомобиля не заполнены</div>"}
+                    </div>
+                    <div class="vehicle-actions">
+                        <button class="btn-primary" onclick="openVehicle('${vehicle.id}')">
+                            Открыть автомобиль →
+                        </button>
+                        <button class="btn-secondary" onclick="openEditVehicleModal('${vehicle.id}')">
+                            ✏️ Изменить
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    }
 
     document.getElementById("clientModalBg").style.display = "block";
 }
@@ -3332,197 +3357,10 @@ async function saveClient() {
                 }
             );
 
-            const clientVehicle =
-                vehicles.find(
-                    v => v.client_id === editingClientId
-                );
-
-            const vehicleData = {
-                client_id: editingClientId,
-                plate: document.getElementById("vehiclePlate").value.trim(),
-                vin: vehicleVinValue,
-                make: document.getElementById("vehicleMake").value.trim(),
-                model: document.getElementById("vehicleModel").value.trim(),
-                year: parseInteger(
-                    document.getElementById("vehicleYear").value
-                ),
-                engine: document.getElementById("vehicleEngine").value.trim(),
-                current_mileage: parseInteger(
-                    document.getElementById("vehicleMileage").value
-                )
-            };
-
-            const hasVehicleData =
-                vehicleData.make ||
-                vehicleData.model ||
-                vehicleData.plate ||
-                vehicleData.vin ||
-                vehicleData.year !== null ||
-                vehicleData.engine ||
-                vehicleData.current_mileage !== null;
-
-            if (clientVehicle) {
-                await api(
-                    "vehicles?id=eq." +
-                    encodeURIComponent(clientVehicle.id),
-                    {
-                        method: "PATCH",
-                        headers: {
-                            "Prefer": "return=representation"
-                        },
-                        body: JSON.stringify(vehicleData)
-                    }
-                );
-            } else if (hasVehicleData) {
-                await api(
-                    "vehicles",
-                    {
-                        method: "POST",
-                        headers: {
-                            "Prefer": "return=representation"
-                        },
-                        body: JSON.stringify(vehicleData)
-                    }
-                );
-            }
-
             closeClientModal();
             await loadData();
+            setStatus("Данные клиента обновлены.");
             return;
-        }
-
-        const client = await api(
-            "clients",
-            {
-                method: "POST",
-                headers: {
-                    "Prefer": "return=representation"
-                },
-                body: JSON.stringify(clientData)
-            }
-        );
-
-        const clientId = client[0].id;
-        const make = document.getElementById("vehicleMake").value.trim();
-        const model = document.getElementById("vehicleModel").value.trim();
-
-        if (
-            make ||
-            model ||
-            document.getElementById("vehiclePlate").value.trim() ||
-            vehicleVinValue
-        ) {
-            await api(
-                "vehicles",
-                {
-                    method: "POST",
-                    headers: {
-                        "Prefer": "return=representation"
-                    },
-                    body: JSON.stringify({
-                        client_id: clientId,
-                        plate: document.getElementById("vehiclePlate").value.trim(),
-                        vin: getVehicleVins().join("\n"),
-                        make: make,
-                        model: model,
-                        year: parseInteger(document.getElementById("vehicleYear").value),
-                        engine: document.getElementById("vehicleEngine").value.trim(),
-                        current_mileage: parseInteger(document.getElementById("vehicleMileage").value)
-                    })
-                }
-            );
-        }
-
-        closeClientModal();
-        await loadData();
-
-    } catch (error) {
-        console.error(error);
-        alert("Ошибка сохранения клиента:\n\n" + error.message);
-    }
-}
-
-function formatPhone(input) {
-    const digits = input.value.replace(/\D/g, "").slice(0, 12);
-    if (!digits) {
-        input.value = "";
-        return;
-    }
-
-    let formatted = "+" + digits.slice(0, 3);
-    if (digits.length > 3) formatted += " " + digits.slice(3, 5);
-    if (digits.length > 5) formatted += " " + digits.slice(5, 8);
-    if (digits.length > 8) formatted += " " + digits.slice(8, 10);
-    if (digits.length > 10) formatted += " " + digits.slice(10, 12);
-
-    input.value = formatted;
-}
-
-
-function sanitizePlate(input) {
-    input.value = input.value.replace(/[А-Яа-яЁё]/g, "").toUpperCase();
-}
-
-function sanitizeVin(input) {
-    input.value = input.value.replace(/[А-Яа-яЁё]/g, "").toUpperCase();
-}
-
-function addVinField(value = "") {
-    const container = document.getElementById("vehicleVinFields");
-    if (!container) return;
-    const row = document.createElement("div");
-    row.className = "vin-row";
-    row.style.cssText = "display:flex;gap:8px;margin-bottom:8px;";
-    const input = document.createElement("input");
-    input.type = "text";
-    input.className = "vehicle-vin-input";
-    input.autocomplete = "off";
-    input.placeholder = "VIN";
-    input.value = value || "";
-    input.setAttribute("oninput", "sanitizeVin(this)");
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "btn-danger small-button";
-    remove.textContent = "✕";
-    remove.title = "Удалить VIN";
-    remove.onclick = () => row.remove();
-    row.appendChild(input);
-    row.appendChild(remove);
-    container.appendChild(row);
-    sanitizeVin(input);
-}
-
-function getVehicleVins() {
-    return Array.from(document.querySelectorAll("#vehicleVinFields .vehicle-vin-input"))
-        .map(input => input.value.trim())
-        .filter(Boolean);
-}
-
-function setVehicleVins(value) {
-    const container = document.getElementById("vehicleVinFields");
-    if (!container) return;
-    container.innerHTML = "";
-    const values = String(value || "").split(/[\n,]+/).map(v => v.trim()).filter(Boolean);
-    if (!values.length) {
-        addVinField("");
-        return;
-    }
-    values.forEach((vin, index) => {
-        if (index === 0) {
-            const row = document.createElement("div");
-            row.className = "vin-row";
-            row.style.cssText = "display:flex;gap:8px;margin-bottom:8px;";
-            const input = document.createElement("input");
-            input.id = "vehicleVin";
-            input.type = "text";
-            input.className = "vehicle-vin-input";
-            input.autocomplete = "off";
-            input.placeholder = "VIN";
-            input.value = vin;
-            input.setAttribute("oninput", "sanitizeVin(this)");
-            row.appendChild(input);
-            container.appendChild(row);
-            sanitizeVin(input);
         } else {
             addVinField(vin);
         }
