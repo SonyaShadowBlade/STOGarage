@@ -1563,7 +1563,7 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.13";
+const APP_VERSION = "0.3.14";
 
 function showVersionCheck(text, success = false) {
     const bg = document.getElementById("versionCheckBg");
@@ -3342,7 +3342,6 @@ async function saveClient() {
             notes: document.getElementById("clientNotes").value.trim()
         };
 
-        // VIN'ы собираем до обеих веток: и при создании, и при редактировании.
         const vehicleVinValue = getVehicleVins().join("\n");
 
         if (editingClientId) {
@@ -3361,10 +3360,61 @@ async function saveClient() {
             await loadData();
             setStatus("Данные клиента обновлены.");
             return;
-        } else {
-            addVinField(vin);
         }
-    });
+
+        const client = await api(
+            "clients",
+            {
+                method: "POST",
+                headers: {
+                    "Prefer": "return=representation"
+                },
+                body: JSON.stringify(clientData)
+            }
+        );
+
+        const clientId = client[0].id;
+        const make = document.getElementById("vehicleMake").value.trim();
+        const model = document.getElementById("vehicleModel").value.trim();
+
+        if (
+            make ||
+            model ||
+            document.getElementById("vehiclePlate").value.trim() ||
+            vehicleVinValue ||
+            document.getElementById("vehicleYear").value ||
+            document.getElementById("vehicleEngine").value.trim() ||
+            document.getElementById("vehicleMileage").value
+        ) {
+            await api(
+                "vehicles",
+                {
+                    method: "POST",
+                    headers: {
+                        "Prefer": "return=representation"
+                    },
+                    body: JSON.stringify({
+                        client_id: clientId,
+                        plate: document.getElementById("vehiclePlate").value.trim(),
+                        vin: vehicleVinValue,
+                        make: make,
+                        model: model,
+                        year: parseInteger(document.getElementById("vehicleYear").value),
+                        engine: document.getElementById("vehicleEngine").value.trim(),
+                        current_mileage: parseInteger(document.getElementById("vehicleMileage").value)
+                    })
+                }
+            );
+        }
+
+        closeClientModal();
+        await loadData();
+        setStatus("Клиент создан.");
+
+    } catch (error) {
+        console.error(error);
+        alert("Ошибка сохранения клиента:\n\n" + error.message);
+    }
 }
 
 /* =====================================================
