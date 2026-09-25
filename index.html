@@ -926,16 +926,8 @@
             💡 Что нового
         </button>
 
-        <button class="btn-danger" onclick="alert('Раздел «Черный список» пока находится в разработке.')">
-            🚫 Черный список
-        </button>
-
         <button class="btn-secondary" onclick="kickEngineer()">
             👨‍🔧 Пнуть инженера
-        </button>
-
-        <button class="btn-secondary" onclick="sunnyTest()">
-            ☀️ Солнце
         </button>
 
         <button class="btn-secondary" onclick="openBackupModal()">
@@ -1566,7 +1558,7 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.15";
+const APP_VERSION = "0.3.16";
 
 function showVersionCheck(text, success = false) {
     const bg = document.getElementById("versionCheckBg");
@@ -1712,28 +1704,47 @@ function closeChangelog() {
     if (bg) bg.style.display = "none";
 }
 
-function checkVersionNow() {
-    /*
-        Ручная проверка теперь НЕ зависит от номера версии.
-        Нажатие кнопки всегда получает свежую страницу с GitHub Pages
-        и обходит кэш. Поэтому для обычных изменений APP_VERSION
-        менять не нужно.
-    */
-    showVersionCheck("Проверяем обновления...");
-    
-    setTimeout(() => {
-        const freshUrl =
-            window.location.origin +
-            window.location.pathname +
-            "?refresh=" +
-            Date.now();
+async function checkVersionNow() {
+    showVersionCheck("Проверяем актуальность программы...");
 
-        showVersionCheck("Загружаем свежую версию программы...");
+    try {
+        const response = await fetch("version.json?check=" + Date.now(), {
+            cache: "no-store",
+            headers: {"Cache-Control": "no-cache", "Pragma": "no-cache"}
+        });
 
-        setTimeout(() => {
-            window.location.replace(freshUrl);
-        }, 500);
-    }, 250);
+        if (!response.ok) {
+            showVersionCheck("Не удалось получить версию с GitHub Pages.", true);
+            setTimeout(closeVersionCheck, 1800);
+            return;
+        }
+
+        const remote = await response.json();
+        const remoteVersion = remote && remote.version;
+
+        if (!remoteVersion) {
+            showVersionCheck("GitHub Pages не вернул номер версии.", true);
+            setTimeout(closeVersionCheck, 1800);
+            return;
+        }
+
+        if (remoteVersion === APP_VERSION) {
+            showVersionCheck("✅ Версия актуальна: " + APP_VERSION, true);
+        } else {
+            showVersionCheck(
+                "ℹ️ На GitHub уже есть версия " + remoteVersion +
+                ". Текущая загруженная версия: " + APP_VERSION +
+                ". Обновление страницы сейчас не запускаем.",
+                true
+            );
+        }
+
+        setTimeout(closeVersionCheck, 2800);
+    } catch (error) {
+        console.warn("Не удалось проверить версию:", error);
+        showVersionCheck("Не удалось проверить версию. Проверьте соединение.", true);
+        setTimeout(closeVersionCheck, 1800);
+    }
 }
 
 async function checkForProgramUpdate(manualCheck = false) {
