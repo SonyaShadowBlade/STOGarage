@@ -870,6 +870,7 @@
 
 <header style="display:flex;align-items:center;gap:12px;">
     <span>🚗 СТО — сервисная база</span>
+    <span id="userGreeting" style="margin-left:auto;font-size:16px;font-weight:700;opacity:0.95;"></span>
     <button id="logoutButton" class="btn-secondary auth-logout" onclick="logout()" style="display:none;">
         🚪 Выйти
     </button>
@@ -1708,11 +1709,40 @@ function clearSession() {
     localStorage.removeItem(AUTH_STORAGE_KEY);
 }
 
+function getCurrentUserGreeting() {
+    const email = String(
+        authSession &&
+        authSession.user &&
+        authSession.user.email
+            ? authSession.user.email
+            : ""
+    ).trim().toLowerCase();
+
+    const loginName = email.split("@")[0];
+
+    if (loginName === "komarov.yurik") {
+        return "Hi, Тех.Директор";
+    }
+
+    if (loginName === "komarov.aleksandr") {
+        return "Hi, Admin";
+    }
+
+    return email ? "Hi, " + loginName : "";
+}
+
+function updateUserGreeting() {
+    const greeting = document.getElementById("userGreeting");
+    if (!greeting) return;
+    greeting.textContent = getCurrentUserGreeting();
+}
+
 function showAuth(show = true) {
     const bg = document.getElementById("authBg");
     const logoutButton = document.getElementById("logoutButton");
     if (bg) bg.style.display = show ? "flex" : "none";
     if (logoutButton) logoutButton.style.display = show ? "none" : "block";
+    updateUserGreeting();
 }
 
 function showAuthError(message) {
@@ -1950,6 +1980,7 @@ async function login(event) {
         const remember = document.getElementById("rememberMe").checked;
         saveSession(session, remember);
         document.getElementById("authPassword").value = "";
+        updateUserGreeting();
         showAuth(false);
         await loadData();
         await startRealtimeSync();
@@ -7179,6 +7210,7 @@ async function runStartup() {
     }
 
     authSession = stored;
+    updateUserGreeting();
 
     const refreshed = await refreshAuthSession();
 
