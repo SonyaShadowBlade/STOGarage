@@ -2328,36 +2328,26 @@ async function login(event) {
         document.getElementById("authPassword").value = "";
         updateUserGreeting();
 
-        // Сначала сразу переключаем интерфейс по аккаунту,
-        // и только потом убираем окно авторизации.
-        // Поэтому Санечка не увидит даже краткого кадра обычного СТО.
+        // Санечка получает отдельный кабинет сразу после входа.
+        // Не ждём загрузку основной базы СТО и не делаем лишние RPC:
+        // core-таблицы для него закрыты RLS, а две кнопки должны появиться
+        // независимо от состояния этих запросов.
         applyUserInterfaceMode();
         showAuth(false);
 
+        if (isSanechkaAccount()) {
+            // Проверка версии выполняется сразу при входе.
+            // Загрузка арендных данных — отдельно, чтобы не блокировать кабинет.
+            await checkForProgramUpdate(false);
+            loadSanechkaRentalData().catch(error => {
+                console.warn("Фоновая загрузка аренды Санечки:", error);
+            });
+            return;
+        }
+
         await loadData();
         applyUserInterfaceMode();
-        if (!isSanechkaAccount()) {
-            await startRealtimeSync();
-        }
-
-        // При обычном входе runStartup() не вызывается повторно,
-        // поэтому проверяем роль и версию здесь тоже.
-        try {
-            sanechkaRentalProfile = await api(
-                "rpc/get_my_rental_profile",
-                {
-                    method: "POST",
-                    body: JSON.stringify({})
-                }
-            );
-
-            if (Array.isArray(sanechkaRentalProfile)) {
-                sanechkaRentalProfile = sanechkaRentalProfile[0] || null;
-            }
-        } catch (roleError) {
-            sanechkaRentalProfile = null;
-            console.warn("Не удалось определить роль после входа:", roleError);
-        }
+        await startRealtimeSync();
 
         const userRole = String(
             sanechkaRentalProfile && sanechkaRentalProfile.role || ""
@@ -8226,6 +8216,16 @@ async function runStartup() {
 
     applyUserInterfaceMode();
 
+    // Для сохранённой сессии Санечки тоже не ждём загрузку основной базы.
+    // Его кабинет должен открыться сразу, а данные аренды подгружаются отдельно.
+    if (isSanechkaAccount()) {
+        await checkForProgramUpdate(false);
+        loadSanechkaRentalData().catch(error => {
+            console.warn("Фоновая загрузка аренды Санечки:", error);
+        });
+        return;
+    }
+
     try {
         await loadData();
         applyUserInterfaceMode();
@@ -8233,23 +8233,15 @@ async function runStartup() {
         console.error("Ошибка загрузки СТО:", error);
     }
 
-    if (!isSanechkaAccount()) {
-        await startRealtimeSync();
-    }
+    await startRealtimeSync();
 
-    // Автоматические копии относятся только к основной базе СТО.
-    // Санечка не должен даже инициировать запросы к core-таблицам.
-    if (!isSanechkaAccount()) {
-        setTimeout(() => {
-            runAutomaticBackupIfNeeded();
-        }, 1000);
-    }
+    setTimeout(() => {
+        runAutomaticBackupIfNeeded();
+    }, 1000);
 
     const userRole = String(sanechkaRentalProfile && sanechkaRentalProfile.role || "").toLowerCase();
     const isStaff = userRole === "admin" || userRole === "father";
 
-    // Проверка версии нужна всем аккаунтам, включая Санечку.
-    // Для Санечки показываем окно проверки, но не запускаем проверку дважды.
     checkForProgramUpdate(isStaff);
 }
 
