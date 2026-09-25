@@ -8121,11 +8121,13 @@ async function runStartup() {
         await startRealtimeSync();
     }
 
-    // Автокопия запускается после полной загрузки данных и авторизации.
-    // Если за последние 24 часа копия уже есть, новая не создаётся.
-    setTimeout(() => {
-        runAutomaticBackupIfNeeded();
-    }, 1000);
+    // Автоматические копии относятся только к основной базе СТО.
+    // Санечка не должен даже инициировать запросы к core-таблицам.
+    if (!isSanechkaAccount()) {
+        setTimeout(() => {
+            runAutomaticBackupIfNeeded();
+        }, 1000);
+    }
 
     checkForProgramUpdate();
 }
