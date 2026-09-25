@@ -1247,6 +1247,78 @@
 
 
 <!-- =========================
+     МОДАЛКА РЕДАКТИРОВАНИЯ АВТОМОБИЛЯ
+========================= -->
+
+<div id="editVehicleModalBg" class="modal-bg">
+
+    <div class="modal">
+
+        <div class="modal-header">
+
+            <h2 id="editVehicleModalTitle">Изменить автомобиль</h2>
+
+            <button class="btn-secondary" onclick="closeEditVehicleModal()">✕</button>
+
+        </div>
+
+        <div class="grid-2">
+
+            <div class="field">
+                <label>Марка</label>
+                <input id="editVehicleMake">
+            </div>
+
+            <div class="field">
+                <label>Модель</label>
+                <input id="editVehicleModel">
+            </div>
+
+            <div class="field">
+                <label>Госномер</label>
+                <input id="editVehiclePlate" type="text" autocomplete="off" oninput="sanitizePlate(this)">
+            </div>
+
+            <div class="field">
+                <label>VIN</label>
+                <input id="editVehicleVin" type="text" autocomplete="off" oninput="sanitizeVin(this)">
+            </div>
+
+            <div class="field">
+                <label>Год</label>
+                <input id="editVehicleYear" type="number">
+            </div>
+
+            <div class="field">
+                <label>Двигатель</label>
+                <input id="editVehicleEngine">
+            </div>
+
+            <div class="field">
+                <label>Текущий пробег</label>
+                <input id="editVehicleMileage" type="number">
+            </div>
+
+        </div>
+
+        <div class="form-buttons">
+
+            <button class="btn-primary" onclick="saveEditedVehicle()">
+                💾 Сохранить изменения
+            </button>
+
+            <button class="btn-secondary" onclick="closeEditVehicleModal()">
+                Отмена
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================
      МОДАЛКА АВТОМОБИЛЯ
 ========================= -->
 
@@ -1482,7 +1554,7 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.11";
+const APP_VERSION = "0.3.12";
 
 function showVersionCheck(text, success = false) {
     const bg = document.getElementById("versionCheckBg");
@@ -1507,6 +1579,14 @@ function closeVersionCheck() {
 }
 
 const CHANGELOG = [
+    {
+        version: "0.3.12",
+        date: "25.09.2026",
+        changes: [
+            "Редактирование данных автомобиля вынесено в отдельную кнопку у каждой машины.",
+            "Редактирование клиента теперь изменяет только данные клиента."
+        ]
+    },
     {
         version: "0.3.11",
         date: "25.09.2026",
@@ -2839,7 +2919,7 @@ function renderClients() {
                                     '${client.id}'
                                 )"
                             >
-                                ✏️ Изменить данные
+                                ✏️ Изменить клиента
                             </button>
 
                             <button
@@ -2995,6 +3075,15 @@ function renderVehicle(
                     Открыть автомобиль →
                 </button>
 
+                <button
+                    class="btn-secondary"
+                    onclick="openEditVehicleModal(
+                        '${vehicle.id}'
+                    )"
+                >
+                    ✏️ Изменить
+                </button>
+
             </div>
 
         </div>
@@ -3078,6 +3167,70 @@ async function saveAdditionalVehicle() {
     } catch (error) {
         console.error(error);
         alert("Ошибка добавления автомобиля:\n\n" + error.message);
+    }
+}
+
+
+/* =====================================================
+   РЕДАКТИРОВАНИЕ АВТОМОБИЛЯ
+===================================================== */
+
+let editingVehicleId = null;
+
+function openEditVehicleModal(vehicleId) {
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+    if (!vehicle) return;
+
+    editingVehicleId = vehicleId;
+
+    document.getElementById("editVehicleModalTitle").textContent = "Изменить автомобиль";
+    document.getElementById("editVehicleMake").value = vehicle.make || "";
+    document.getElementById("editVehicleModel").value = vehicle.model || "";
+    document.getElementById("editVehiclePlate").value = vehicle.plate || "";
+    document.getElementById("editVehicleVin").value = vehicle.vin || "";
+    document.getElementById("editVehicleYear").value = vehicle.year || "";
+    document.getElementById("editVehicleEngine").value = vehicle.engine || "";
+    document.getElementById("editVehicleMileage").value = vehicle.current_mileage ?? "";
+
+    document.getElementById("editVehicleModalBg").style.display = "block";
+}
+
+function closeEditVehicleModal() {
+    document.getElementById("editVehicleModalBg").style.display = "none";
+    editingVehicleId = null;
+}
+
+async function saveEditedVehicle() {
+    if (!editingVehicleId) return;
+
+    try {
+        const vehicleData = {
+            plate: document.getElementById("editVehiclePlate").value.trim(),
+            vin: document.getElementById("editVehicleVin").value.trim(),
+            make: document.getElementById("editVehicleMake").value.trim(),
+            model: document.getElementById("editVehicleModel").value.trim(),
+            year: parseInteger(document.getElementById("editVehicleYear").value),
+            engine: document.getElementById("editVehicleEngine").value.trim(),
+            current_mileage: parseInteger(document.getElementById("editVehicleMileage").value)
+        };
+
+        await api(
+            "vehicles?id=eq." + encodeURIComponent(editingVehicleId),
+            {
+                method: "PATCH",
+                headers: {
+                    "Prefer": "return=representation"
+                },
+                body: JSON.stringify(vehicleData)
+            }
+        );
+
+        closeEditVehicleModal();
+        await loadData();
+        setStatus("Данные автомобиля обновлены.");
+    } catch (error) {
+        console.error(error);
+        alert("Ошибка изменения автомобиля:\n\n" + error.message);
     }
 }
 
