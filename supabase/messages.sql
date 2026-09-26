@@ -462,7 +462,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public
-as $
+as $$
 declare
     current_user_id uuid;
     read_at timestamptz;
@@ -506,7 +506,7 @@ begin
         'last_read_at', read_at
     );
 end;
-$;
+$$;
 
 -- Сотрудник отвечает клиенту.
 create or replace function public.developer_staff_reply(
