@@ -19,3 +19,24 @@ set price_per_liter = case
     else null
 end
 where price_per_liter is null;
+
+
+-- Поездки: конечный пробег может быть пустым у активной поездки.
+alter table public.rental_trips
+    alter column end_mileage drop not null;
+
+-- Поездки: активная или завершённая.
+alter table public.rental_trips
+    add column if not exists status text not null default 'active';
+
+update public.rental_trips
+set status = case
+    when end_mileage is null then 'active'
+    else 'completed'
+end
+where status is null
+   or status not in ('active', 'completed');
+
+-- Время поездки. Если колонка уже есть, команда ничего не меняет.
+alter table public.rental_trips
+    add column if not exists trip_time time;
