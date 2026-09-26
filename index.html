@@ -3665,7 +3665,7 @@ async function saveRentalTrip(){
             driver:document.getElementById("rentalTripDriver").value,
             startMileage:a,endMileage:b,status:hasEnd?"completed":"active",
             note:document.getElementById("rentalTripNote").value.trim()
-        }){
+        })){
             closeRentalEntryModal();
             rentalSaved(editing?(hasEnd?"Поездка обновлена и завершена.":"Поездка обновлена и оставлена активной."):(hasEnd?"Поездка завершена и сохранена.":"Поездка сохранена как активная."));
         }
