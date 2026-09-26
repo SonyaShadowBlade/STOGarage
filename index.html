@@ -9046,24 +9046,48 @@ async function openDeveloperMessages() {
     else await loadDeveloperClientConversation();
 }
 
-function closeDeveloperMessages() {
+async function closeDeveloperMessages() {
+    const wasStaffChat = isStaffAccount() && !!developerActiveConversationId;
+    const conversationId = developerActiveConversationId;
+
+    if (wasStaffChat && conversationId) {
+        try {
+            await api("rpc/developer_mark_read", {
+                method: "POST",
+                body: JSON.stringify({
+                    p_conversation_id: conversationId
+                })
+            });
+        } catch (error) {
+            console.warn("Не удалось подтвердить прочтение при закрытии чата:", error);
+        }
+    }
+
     const bg = document.getElementById("developerMessagesModalBg");
     if (bg) bg.style.display = "none";
     developerActiveConversationId = null;
     showDeveloperMessagesStatus("");
+
+    if (isStaffAccount()) {
+        await refreshDeveloperMessagesBadge();
+    } else {
+        updateDeveloperClientMessagesButton(0);
+    }
 }
 
 async function loadDeveloperClientConversation() {
     try {
         const data = await api("rpc/developer_get_my_conversation",{method:"POST",body:JSON.stringify({})});
         const conversation = data && data.conversation;
-        const messages = data && Array.isArray(data.messages) ? data.messages : [];
-        renderDeveloperChatMessages("developerClientChat",messages);
-        updateDeveloperClientMessagesButton(data && data.unread_for_client_count);
         if (conversation && conversation.id) {
             await api("rpc/developer_mark_read",{method:"POST",body:JSON.stringify({p_conversation_id:conversation.id})});
-            updateDeveloperClientMessagesButton(0);
         }
+        const refreshed = conversation && conversation.id
+            ? await api("rpc/developer_get_my_conversation",{method:"POST",body:JSON.stringify({})})
+            : data;
+        const messages = refreshed && Array.isArray(refreshed.messages) ? refreshed.messages : [];
+        renderDeveloperChatMessages("developerClientChat",messages);
+        updateDeveloperClientMessagesButton(refreshed && refreshed.unread_for_client_count);
     } catch (error) {
         console.error("Ошибка загрузки сообщений клиента:",error);
         showDeveloperMessagesStatus("Не удалось загрузить сообщения: "+error.message,true);
@@ -9147,9 +9171,9 @@ async function openDeveloperConversation(id) {
     document.getElementById("developerStaffChatPanel").style.display="block";
     document.getElementById("developerStaffChatTitle").textContent=c.client_name||"Клиент";
     try {
+        await api("rpc/developer_mark_read",{method:"POST",body:JSON.stringify({p_conversation_id:id})});
         const messages=await api("rpc/developer_get_conversation_messages",{method:"POST",body:JSON.stringify({p_conversation_id:id})});
         renderDeveloperChatMessages("developerStaffChat",Array.isArray(messages)?messages:[]);
-        await api("rpc/developer_mark_read",{method:"POST",body:JSON.stringify({p_conversation_id:id})});
         if(item&&item.conversation) item.conversation.unread_for_staff_count=0;
         updateDeveloperMessagesButton(
             developerMessagesConversations.reduce(
@@ -9194,17 +9218,24 @@ async function refreshDeveloperActiveConversation() {
                 })
             });
 
-            renderDeveloperChatMessages(
-                "developerStaffChat",
-                Array.isArray(messages) ? messages : []
-            );
-
             await api("rpc/developer_mark_read", {
                 method: "POST",
                 body: JSON.stringify({
                     p_conversation_id: developerActiveConversationId
                 })
             });
+
+            const refreshedMessages = await api("rpc/developer_get_conversation_messages", {
+                method: "POST",
+                body: JSON.stringify({
+                    p_conversation_id: developerActiveConversationId
+                })
+            });
+
+            renderDeveloperChatMessages(
+                "developerStaffChat",
+                Array.isArray(refreshedMessages) ? refreshedMessages : []
+            );
 
             const item = developerMessagesConversations.find(
                 x => x && x.conversation &&
