@@ -1180,7 +1180,7 @@
             </div>
             <div class="field">
                 <label>Конечный пробег, км</label>
-                <input id="rentalTripEnd" type="number" min="0">
+                <input id="rentalTripEnd" type="number" min="0" placeholder="Можно оставить пустым">
             </div>
             <div class="field" style="grid-column:1/-1">
                 <label>Маршрут / примечание</label>
@@ -3263,6 +3263,7 @@ async function getCloudRentalRecords(vehicleId) {
             driver: r.driver || "",
             startMileage: r.start_mileage,
             endMileage: r.end_mileage,
+            status: r.status || (r.end_mileage != null ? "completed" : "active"),
             note: r.route_note || "",
             createdAt: r.created_at
         })),
@@ -3309,8 +3310,9 @@ async function saveCloudRentalRecord(vehicleId, record) {
                 driver: record.driver || null,
                 trip_date: record.date || new Date().toISOString().slice(0, 10),
                 start_mileage: record.startMileage,
-                end_mileage: record.endMileage,
+                end_mileage: record.endMileage == null ? null : record.endMileage,
                 trip_time: record.time || null,
+                status: record.status || (record.endMileage == null ? "active" : "completed"),
                 route_note: record.note || null
             })
         });
@@ -3567,8 +3569,12 @@ async function renderRentalDashboard(){
 
     document.getElementById("rentalHistory").innerHTML=rs.length?[...rs].sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))).map(r=>{
         if(r.type==="trip"){
-            const d=Math.max(0,Number(r.endMileage)-Number(r.startMileage));
-            return '<div class="rental-record"><div class="rental-record-title">🛣 Поездка — '+escapeHtml(r.date||"")+' '+escapeHtml(r.time||"")+'</div><div class="rental-record-meta">Водитель: '+escapeHtml(r.driver||"—")+' · '+Number(r.startMileage).toLocaleString("ru-RU")+' → '+Number(r.endMileage).toLocaleString("ru-RU")+' км · '+d.toLocaleString("ru-RU")+' км<br>'+escapeHtml(r.note||"")+'</div></div>';
+            const hasEnd = r.endMileage != null && Number.isFinite(Number(r.endMileage));
+            const d=hasEnd ? Math.max(0,Number(r.endMileage)-Number(r.startMileage)) : null;
+            const status = r.status === "completed" ? "Завершена" : "Активна";
+            const endText = hasEnd ? Number(r.endMileage).toLocaleString("ru-RU")+" км" : "—";
+            const kmText = hasEnd ? d.toLocaleString("ru-RU")+" км" : "пробег ещё не завершён";
+            return '<div class="rental-record"><div class="rental-record-title">🛣 Поездка — '+escapeHtml(r.date||"")+' '+escapeHtml(r.time||"")+' · <strong>'+status+'</strong></div><div class="rental-record-meta">Водитель: '+escapeHtml(r.driver||"—")+' · '+Number(r.startMileage).toLocaleString("ru-RU")+' → '+endText+' · '+kmText+'<br>'+escapeHtml(r.note||"")+'</div></div>';
         }
         if(r.type==="fuel")
             return '<div class="rental-record"><div class="rental-record-title">⛽ Заправка — '+escapeHtml(r.date||"")+' '+escapeHtml(r.time||"")+'</div><div class="rental-record-meta">'+Number(r.liters||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+' л · '+Number(r.cost||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+' '+escapeHtml(r.currency||"BYN")+' · '+Number(r.pricePerLiter||0).toLocaleString("ru-RU",{maximumFractionDigits:3})+' '+escapeHtml(r.currency||"BYN")+'/л · пробег '+Number(r.mileage||0).toLocaleString("ru-RU")+' км<br>'+escapeHtml(r.note||"")+'</div></div>';
@@ -3592,9 +3598,12 @@ async function addRentalRecord(r){
 }
 function rentalSaved(msg){const e=document.getElementById("rentalStatus");e.textContent=msg;e.style.display="block";setTimeout(()=>e.style.display="none",1800)}
 async function saveRentalTrip(){
-    const a=Number(document.getElementById("rentalTripStart").value);
-    const b=Number(document.getElementById("rentalTripEnd").value);
-    if(!Number.isFinite(a)||!Number.isFinite(b)||a<0||b<a){alert("Проверьте начальный и конечный пробег.");return}
+    const startRaw=document.getElementById("rentalTripStart").value;
+    const endRaw=document.getElementById("rentalTripEnd").value;
+    const a=Number(startRaw);
+    const hasEnd=endRaw.trim()!=="";
+    const b=hasEnd?Number(endRaw):null;
+    if(!Number.isFinite(a)||a<0||(hasEnd&&(!Number.isFinite(b)||b<a))){alert("Проверьте начальный и конечный пробег.");return}
 
     try{
         if(await addRentalRecord({
@@ -3604,15 +3613,13 @@ async function saveRentalTrip(){
             driver:document.getElementById("rentalTripDriver").value,
             startMileage:a,
             endMileage:b,
+            status:hasEnd?"completed":"active",
             note:document.getElementById("rentalTripNote").value.trim()
         })){
-            document.getElementById("rentalTripStart").value=b;
+            document.getElementById("rentalTripStart").value=hasEnd?b:"";
             document.getElementById("rentalTripEnd").value="";
             document.getElementById("rentalTripNote").value="";
-            rentalSaved("Поездка сохранена.");
-            if (isSanechkaAccount()) {
-                await renderSanechkaTripHistory();
-            }
+            rentalSaved(hasEnd?"Поездка завершена и сохранена.":"Поездка сохранена как активная.");
         }
     }catch(error){
         console.error(error);
