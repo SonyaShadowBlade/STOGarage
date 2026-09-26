@@ -8595,8 +8595,10 @@ async function runStartup() {
 
 /* =====================================================
    МОБИЛЬНАЯ КНОПКА «НАЗАД»
-   Если открыто окно СТО — закрываем его вместо выхода
-   со страницы.
+   Единая пошаговая навигация для всех пользователей.
+   Любое открытое внутреннее окно получает отдельную
+   запись в истории браузера. Кнопка телефона «Назад»
+   закрывает верхнее окно, а не покидает программу.
 ===================================================== */
 
 const STO_MODAL_HISTORY_IDS = [
@@ -8609,11 +8611,14 @@ const STO_MODAL_HISTORY_IDS = [
     "editVehicleModalBg",
     "vehicleModalBg",
     "serviceModalBg",
-    "backupBg"
+    "backupBg",
+    "versionCheckBg",
+    "kickSceneBg"
 ];
 
-let stoModalHistoryDepth = 0;
-let stoModalHistoryBusy = false;
+let stoModalHistoryStack = [];
+let stoModalHistoryHandlingPop = false;
+let stoModalHistoryObserver = null;
 
 function getVisibleStoModals() {
     return STO_MODAL_HISTORY_IDS
@@ -8621,76 +8626,48 @@ function getVisibleStoModals() {
         .filter(el => el && getComputedStyle(el).display !== "none");
 }
 
-function stoPushModalHistory() {
-    if (stoModalHistoryBusy) return;
-
-    history.pushState(
-        { stoModal: true },
-        document.title,
-        window.location.href
-    );
-    stoModalHistoryDepth++;
-}
-
-function stoBackAfterClosing(count) {
-    if (stoModalHistoryBusy || count <= 0 || stoModalHistoryDepth <= 0) return;
-
-    const steps = Math.min(count, stoModalHistoryDepth);
-    stoModalHistoryDepth -= steps;
-
-    stoModalHistoryBusy = true;
-    history.go(-steps);
-
-    setTimeout(() => {
-        stoModalHistoryBusy = false;
-    }, 100);
-}
-
-function wrapStoModalOpener(functionName, modalId) {
-    const original = window[functionName];
-    if (typeof original !== "function") return;
-
-    window[functionName] = function(...args) {
-        const wasVisible = !!document.getElementById(modalId) &&
-            getComputedStyle(document.getElementById(modalId)).display !== "none";
-
-        const result = original.apply(this, args);
-
-        if (!wasVisible && !stoModalHistoryBusy) {
-            const modal = document.getElementById(modalId);
-            if (modal && getComputedStyle(modal).display !== "none") {
-                stoPushModalHistory();
-            }
-        }
-
-        return result;
-    };
-}
-
-function wrapStoModalCloser(functionName) {
-    const original = window[functionName];
-    if (typeof original !== "function") return;
-
-    window[functionName] = function(...args) {
-        const visibleBefore = getVisibleStoModals().length;
-
-        const result = original.apply(this, args);
-
-        const visibleAfter = getVisibleStoModals().length;
-        const closedCount = Math.max(0, visibleBefore - visibleAfter);
-
-        stoBackAfterClosing(closedCount);
-        return result;
-    };
-}
-
-function closeTopStoModalFromBack() {
+function getTopStoModal() {
     const visible = getVisibleStoModals();
 
-    if (!visible.length) return false;
+    if (!visible.length) return null;
 
-    const top = visible[visible.length - 1];
+    return visible
+        .map(el => ({
+            el,
+            z: Number.parseInt(getComputedStyle(el).zIndex, 10) || 0
+        }))
+        .sort((a, b) => a.z - b.z)
+        .at(-1).el;
+}
 
+function stoPushModalHistory(modalId) {
+    if (stoModalHistoryHandlingPop) return;
+
+    const lastId = stoModalHistoryStack[stoModalHistoryStack.length - 1];
+
+    if (lastId === modalId) return;
+
+    history.pushState(
+        {
+            stoModal: true,
+            stoModalId: modalId
+        },
+        "",
+        window.location.href
+    );
+
+    stoModalHistoryStack.push(modalId);
+}
+
+function stoRemoveModalFromHistory(modalId) {
+    const index = stoModalHistoryStack.lastIndexOf(modalId);
+
+    if (index < 0) return;
+
+    stoModalHistoryStack.splice(index, 1);
+}
+
+function closeStoModalById(modalId) {
     const closeById = {
         changelogBg: "closeChangelog",
         sanechkaServiceModalBg: "closeSanechkaServiceModal",
@@ -8701,58 +8678,158 @@ function closeTopStoModalFromBack() {
         editVehicleModalBg: "closeEditVehicleModal",
         vehicleModalBg: "closeVehicleModal",
         serviceModalBg: "closeServiceModal",
-        backupBg: "closeBackupModal"
+        backupBg: "closeBackupModal",
+        versionCheckBg: "closeVersionCheck"
     };
 
-    const closeName = closeById[top.id];
+    const closeName = closeById[modalId];
 
     if (closeName && typeof window[closeName] === "function") {
-        stoModalHistoryBusy = true;
-        try {
-            window[closeName]();
-        } finally {
-            stoModalHistoryBusy = false;
-        }
-    } else {
-        top.style.display = "none";
+        window[closeName]();
+        return;
     }
 
-    return true;
+    const modal = document.getElementById(modalId);
+
+    if (modal) {
+        modal.style.display = "none";
+    }
 }
 
-[
-    ["openChangelog", "changelogBg"],
-    ["openSanechkaServiceModal", "sanechkaServiceModalBg"],
-    ["openRentalModal", "rentalModalBg"],
-    ["openRentalEntryModal", "rentalEntryModalBg"],
-    ["openClientModal", "clientModalBg"],
-    ["openAddVehicleModal", "addVehicleModalBg"],
-    ["openEditVehicleModal", "editVehicleModalBg"],
-    // Автомобиль открывается функцией openVehicle(), а не openVehicleModal().
-    ["openVehicle", "vehicleModalBg"],
-    ["openServiceModal", "serviceModalBg"],
-    ["openBackupModal", "backupBg"]
-].forEach(([name, id]) => wrapStoModalOpener(name, id));
+function stoHandleModalOpened(modalId) {
+    if (stoModalHistoryHandlingPop) return;
 
-[
-    "closeChangelog",
-    "closeSanechkaServiceModal",
-    "closeRentalEntryModal",
-    "closeRentalModal",
-    "closeClientModal",
-    "closeAddVehicleModal",
-    "closeEditVehicleModal",
-    "closeVehicleModal",
-    "closeServiceModal",
-    "closeBackupModal"
-].forEach(name => wrapStoModalCloser(name));
+    const existingIndex = stoModalHistoryStack.lastIndexOf(modalId);
 
-window.addEventListener("popstate", () => {
-    if (stoModalHistoryDepth > 0) {
-        stoModalHistoryDepth--;
-        closeTopStoModalFromBack();
+    if (existingIndex >= 0) {
+        return;
     }
-});
+
+    stoPushModalHistory(modalId);
+}
+
+function stoHandleModalClosed(modalId) {
+    if (stoModalHistoryHandlingPop) {
+        stoRemoveModalFromHistory(modalId);
+        return;
+    }
+
+    const index = stoModalHistoryStack.lastIndexOf(modalId);
+
+    if (index < 0) return;
+
+    /*
+        Закрытие кнопкой «✕» или другим обычным способом:
+        двигаемся на одну запись назад, чтобы история браузера
+        не накапливала фантомные состояния.
+    */
+    stoModalHistoryHandlingPop = true;
+
+    stoRemoveModalFromHistory(modalId);
+
+    history.back();
+
+    setTimeout(() => {
+        stoModalHistoryHandlingPop = false;
+    }, 150);
+}
+
+function initStoModalHistory() {
+    if (stoModalHistoryObserver) return;
+
+    /*
+        Текущую страницу считаем базовым состоянием программы.
+        replaceState не добавляет новую запись, а только помечает
+        существующую запись состояния приложения.
+    */
+    if (!history.state || !history.state.stoAppBase) {
+        history.replaceState(
+            {
+                ...(history.state || {}),
+                stoAppBase: true
+            },
+            "",
+            window.location.href
+        );
+    }
+
+    const tracked = new Map();
+
+    STO_MODAL_HISTORY_IDS.forEach(id => {
+        const modal = document.getElementById(id);
+
+        if (!modal) return;
+
+        tracked.set(id, getComputedStyle(modal).display !== "none");
+    });
+
+    stoModalHistoryObserver = new MutationObserver(() => {
+        if (stoModalHistoryHandlingPop) return;
+
+        STO_MODAL_HISTORY_IDS.forEach(id => {
+            const modal = document.getElementById(id);
+
+            if (!modal) return;
+
+            const visible =
+                getComputedStyle(modal).display !== "none";
+
+            const previous = tracked.get(id) || false;
+
+            if (visible === previous) return;
+
+            tracked.set(id, visible);
+
+            if (visible) {
+                stoHandleModalOpened(id);
+            } else {
+                stoHandleModalClosed(id);
+            }
+        });
+    });
+
+    STO_MODAL_HISTORY_IDS.forEach(id => {
+        const modal = document.getElementById(id);
+
+        if (!modal) return;
+
+        stoModalHistoryObserver.observe(modal, {
+            attributes: true,
+            attributeFilter: ["style", "class"]
+        });
+    });
+
+    window.addEventListener("popstate", () => {
+        const visible = getVisibleStoModals();
+
+        if (!visible.length && !stoModalHistoryStack.length) {
+            return;
+        }
+
+        const historyModalId =
+            stoModalHistoryStack.length
+                ? stoModalHistoryStack.pop()
+                : null;
+
+        const topModal = getTopStoModal();
+
+        stoModalHistoryHandlingPop = true;
+
+        try {
+            if (historyModalId) {
+                closeStoModalById(historyModalId);
+            } else if (topModal) {
+                closeStoModalById(topModal.id);
+            }
+        } finally {
+            setTimeout(() => {
+                stoModalHistoryHandlingPop = false;
+            }, 150);
+        }
+    });
+}
+
+initStoModalHistory();
 
 runStartup();
 </script>
