@@ -8762,18 +8762,37 @@ function setupDeveloperChatScroll(el) {
 
     el.dataset.scrollWatcher = "1";
     el.dataset.userScrolledUp = "0";
+    el.style.overflowAnchor = "none";
 
     el.addEventListener("scroll", () => {
+        if (el.dataset.restoringScroll === "1") return;
+
         const distanceFromBottom =
             el.scrollHeight - el.scrollTop - el.clientHeight;
 
         /*
-           Если пользователь сам ушёл вверх больше чем на 80 px,
-           автоматическая проверка сообщений больше не имеет права
-           возвращать его вниз.
+           Пользователь сам прокрутил историю вверх.
+           Пока он находится выше конца чата, никакое фоновое
+           обновление сообщений не должно возвращать его вниз.
         */
         el.dataset.userScrolledUp = distanceFromBottom > 80 ? "1" : "0";
     }, { passive: true });
+}
+
+function restoreDeveloperChatScroll(el, scrollTop) {
+    if (!el) return;
+
+    el.dataset.restoringScroll = "1";
+    el.scrollTop = Math.max(0, scrollTop);
+
+    requestAnimationFrame(() => {
+        el.scrollTop = Math.max(0, scrollTop);
+
+        setTimeout(() => {
+            el.scrollTop = Math.max(0, scrollTop);
+            el.dataset.restoringScroll = "0";
+        }, 80);
+    });
 }
 
 function renderDeveloperChatMessages(targetId, messages) {
@@ -8785,9 +8804,8 @@ function renderDeveloperChatMessages(targetId, messages) {
     const safeMessages = Array.isArray(messages) ? messages : [];
 
     /*
-       Критически важно: обновляем DOM только если переписка действительно
-       изменилась. Раньше проверка сообщений каждую секунду заново делала
-       innerHTML, из-за чего мобильный браузер мог сбрасывать прокрутку вниз.
+       Если данные не изменились, DOM вообще не трогаем.
+       Это особенно важно при периодическом обновлении раз в секунду.
     */
     const signature = safeMessages.map(m => [
         m && m.id || "",
@@ -8804,19 +8822,20 @@ function renderDeveloperChatMessages(targetId, messages) {
 
     const previousScrollTop = el.scrollTop;
     const previousScrollHeight = el.scrollHeight;
-    const distanceFromBottom =
-        previousScrollHeight - previousScrollTop - el.clientHeight;
+    const previousDistanceFromBottom =
+        Math.max(0, previousScrollHeight - previousScrollTop - el.clientHeight);
 
     const userScrolledUp = el.dataset.userScrolledUp === "1";
     const wasNearBottom =
         !wasInitialized ||
-        (!userScrolledUp && distanceFromBottom <= 80);
+        (!userScrolledUp && previousDistanceFromBottom <= 80);
 
     if (!safeMessages.length) {
         el.innerHTML = '<div class="empty">Сообщений пока нет.</div>';
         el.dataset.chatInitialized = "1";
         el.dataset.chatSignature = signature;
         el.dataset.userScrolledUp = "0";
+        restoreDeveloperChatScroll(el, 0);
         return;
     }
 
@@ -8845,27 +8864,34 @@ function renderDeveloperChatMessages(targetId, messages) {
     el.dataset.chatInitialized = "1";
     el.dataset.chatSignature = signature;
 
-    /*
-       Новое сообщение: если пользователь был внизу, остаёмся внизу.
-       Если он читал историю выше, сохраняем его позицию.
-    */
     if (wasNearBottom) {
-        el.scrollTop = el.scrollHeight;
-        el.dataset.userScrolledUp = "0";
+        /*
+           Только при нахождении внизу чата разрешаем автоматический
+           переход к последнему сообщению.
+        */
+        el.dataset.restoringScroll = "1";
+        requestAnimationFrame(() => {
+            el.scrollTop = el.scrollHeight;
+            setTimeout(() => {
+                el.scrollTop = el.scrollHeight;
+                el.dataset.userScrolledUp = "0";
+                el.dataset.restoringScroll = "0";
+            }, 80);
+        });
         return;
     }
 
     /*
-       При добавлении нового сообщения высота контейнера могла измениться.
-       Возвращаем прежнюю позицию пользователя, а не отправляем его вниз.
+       Пользователь был выше. Сохраняем именно расстояние до нижнего
+       края, чтобы новые сообщения снизу не сдвигали историю из-под пальца.
     */
-    const heightDelta = el.scrollHeight - previousScrollHeight;
-    el.scrollTop = previousScrollTop + Math.max(0, heightDelta);
+    const newScrollTop = Math.max(
+        0,
+        el.scrollHeight - el.clientHeight - previousDistanceFromBottom
+    );
 
-    requestAnimationFrame(() => {
-        el.scrollTop = previousScrollTop + Math.max(0, el.scrollHeight - previousScrollHeight);
-        el.dataset.userScrolledUp = "1";
-    });
+    restoreDeveloperChatScroll(el, newScrollTop);
+    el.dataset.userScrolledUp = "1";
 }
 
 async function editDeveloperMessage(messageId) {
