@@ -640,7 +640,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public
-as $
+as $$
 declare
     deleted_message public.developer_messages;
 begin
@@ -662,7 +662,7 @@ begin
         'conversation_id', deleted_message.conversation_id
     );
 end;
-$;
+$$;
 
 revoke all on function public.developer_delete_message(uuid) from public;
 grant execute on function public.developer_delete_message(uuid) to authenticated;
