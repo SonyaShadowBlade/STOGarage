@@ -8760,7 +8760,7 @@ async function refreshDeveloperClientMessagesBadge() {
     }
 
     try {
-        const data = await api("rpc/developer_get_my_conversation", {
+        const data = await api("rpc/developer_get_my_conversation_v2", {
             method: "POST",
             body: JSON.stringify({})
         });
@@ -8980,7 +8980,7 @@ async function editDeveloperMessage(messageId) {
                     p_conversation_id: developerActiveConversationId
                 })
             })
-            : await api("rpc/developer_get_my_conversation", {
+            : await api("rpc/developer_get_my_conversation_v2", {
                 method: "POST",
                 body: JSON.stringify({})
             });
@@ -9087,7 +9087,7 @@ async function closeDeveloperMessages() {
         await refreshDeveloperMessagesBadge();
     } else {
         try {
-            const data = await api("rpc/developer_get_my_conversation", {
+            const data = await api("rpc/developer_get_my_conversation_v2", {
                 method: "POST",
                 body: JSON.stringify({})
             });
@@ -9130,7 +9130,7 @@ async function loadDeveloperClientConversation() {
     ++developerClientUnreadRefreshToken;
 
     try {
-        const data = await api("rpc/developer_get_my_conversation",{method:"POST",body:JSON.stringify({})});
+        const data = await api("rpc/developer_get_my_conversation_v2",{method:"POST",body:JSON.stringify({})});
         const conversation = data && data.conversation;
 
         if (conversation && conversation.id) {
@@ -9147,7 +9147,7 @@ async function loadDeveloperClientConversation() {
         }
 
         const refreshed = conversation && conversation.id
-            ? await api("rpc/developer_get_my_conversation",{
+            ? await api("rpc/developer_get_my_conversation_v2",{
                 method:"POST",
                 body:JSON.stringify({})
             })
@@ -9335,7 +9335,7 @@ async function refreshDeveloperActiveConversation() {
 
             let data;
             try {
-                data = await api("rpc/developer_get_my_conversation", {
+                data = await api("rpc/developer_get_my_conversation_v2", {
                     method: "POST",
                     body: JSON.stringify({})
                 });
@@ -9395,7 +9395,7 @@ async function refreshDeveloperActiveConversation() {
             console.log("[DEV CHAT DIAG] client unread count:", data && data.unread_for_client_count);
 
             const refreshed = conversation && conversation.id
-                ? await api("rpc/developer_get_my_conversation", {
+                ? await api("rpc/developer_get_my_conversation_v2", {
                     method: "POST",
                     body: JSON.stringify({})
                 })
