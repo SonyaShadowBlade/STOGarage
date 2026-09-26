@@ -8914,19 +8914,98 @@ async function sendDeveloperStaffReply() {
     }
 }
 
-/* Проверяем новые сообщения часто, а при возврате во вкладку — сразу. */
-setInterval(refreshDeveloperMessagesBadge,5000);
-setInterval(refreshDeveloperClientMessagesBadge,5000);
+/* Проверяем новые сообщения часто, а при возврате во вкладку — сразу.
+   Если диалог уже открыт, обновляем именно его содержимое без закрытия/открытия. */
+async function refreshDeveloperActiveConversation() {
+    const bg = document.getElementById("developerMessagesModalBg");
+    if (!bg || getComputedStyle(bg).display === "none") return;
+
+    try {
+        if (isStaffAccount() && developerActiveConversationId) {
+            const messages = await api("rpc/developer_get_conversation_messages", {
+                method: "POST",
+                body: JSON.stringify({
+                    p_conversation_id: developerActiveConversationId
+                })
+            });
+
+            renderDeveloperChatMessages(
+                "developerStaffChat",
+                Array.isArray(messages) ? messages : []
+            );
+
+            await api("rpc/developer_mark_read", {
+                method: "POST",
+                body: JSON.stringify({
+                    p_conversation_id: developerActiveConversationId
+                })
+            });
+
+            const item = developerMessagesConversations.find(
+                x => x && x.conversation &&
+                    String(x.conversation.id) === String(developerActiveConversationId)
+            );
+
+            if (item && item.conversation) {
+                item.conversation.unread_for_staff = false;
+            }
+
+            updateDeveloperMessagesButton(
+                developerMessagesConversations.filter(
+                    x => x && x.conversation && x.conversation.unread_for_staff
+                ).length
+            );
+
+            return;
+        }
+
+        if (isClientAccount()) {
+            const data = await api("rpc/developer_get_my_conversation", {
+                method: "POST",
+                body: JSON.stringify({})
+            });
+
+            const conversation = data && data.conversation;
+            const messages =
+                data && Array.isArray(data.messages)
+                    ? data.messages
+                    : [];
+
+            renderDeveloperChatMessages("developerClientChat", messages);
+
+            if (conversation && conversation.id) {
+                await api("rpc/developer_mark_read", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        p_conversation_id: conversation.id
+                    })
+                });
+            }
+
+            updateDeveloperClientMessagesButton(false);
+        }
+    } catch (error) {
+        console.warn("Не удалось обновить открытую переписку:", error);
+    }
+}
+
+setInterval(() => {
+    refreshDeveloperMessagesBadge();
+    refreshDeveloperClientMessagesBadge();
+    refreshDeveloperActiveConversation();
+}, 5000);
 
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
     refreshDeveloperMessagesBadge();
     refreshDeveloperClientMessagesBadge();
+    refreshDeveloperActiveConversation();
 });
 
 window.addEventListener("focus", () => {
     refreshDeveloperMessagesBadge();
     refreshDeveloperClientMessagesBadge();
+    refreshDeveloperActiveConversation();
 });
 
 /* =====================================================
