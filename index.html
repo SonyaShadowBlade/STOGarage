@@ -8837,7 +8837,8 @@ function renderDeveloperChatMessages(targetId, messages) {
         m && m.created_at || "",
         m && m.body || "",
         m && m.sender_side || "",
-        m && m.edited_at || m && m.updated_at || ""
+        m && m.edited_at || m && m.updated_at || "",
+        m && m.message_status || ""
     ].join("|")).join("||");
 
     const wasInitialized = el.dataset.chatInitialized === "1";
@@ -9212,6 +9213,7 @@ async function refreshDeveloperActiveConversation() {
 
             if (item && item.conversation) {
                 item.conversation.unread_for_staff = false;
+                item.conversation.unread_for_staff_count = 0;
             }
 
             updateDeveloperMessagesButton(
