@@ -471,6 +471,68 @@ begin
 end;
 $$;
 
+
+
+-- Редактирование собственных сообщений.
+-- Клиент может изменить только своё сообщение, сотрудник — только своё.
+alter table public.developer_messages
+    add column if not exists edited_at timestamptz;
+
+create or replace function public.developer_edit_message(
+    p_message_id uuid,
+    p_body text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $
+declare
+    message_row public.developer_messages;
+begin
+    if auth.uid() is null then
+        raise exception 'Требуется авторизация';
+    end if;
+
+    if p_body is null or length(trim(p_body)) = 0 then
+        raise exception 'Сообщение не может быть пустым';
+    end if;
+
+    if length(p_body) > 5000 then
+        raise exception 'Сообщение слишком длинное';
+    end if;
+
+    select *
+    into message_row
+    from public.developer_messages
+    where id = p_message_id
+      and sender_user_id = auth.uid();
+
+    if not found then
+        raise exception 'Можно изменять только свои сообщения';
+    end if;
+
+    update public.developer_messages
+    set body = trim(p_body),
+        edited_at = now()
+    where id = p_message_id
+    returning * into message_row;
+
+    return jsonb_build_object(
+        'id', message_row.id,
+        'conversation_id', message_row.conversation_id,
+        'sender_side', message_row.sender_side,
+        'body', message_row.body,
+        'is_read', message_row.is_read,
+        'created_at', message_row.created_at,
+        'edited_at', message_row.edited_at
+    );
+end;
+$;
+
+revoke all on function public.developer_edit_message(uuid,text) from public;
+grant execute on function public.developer_edit_message(uuid,text) to authenticated;
+
 revoke all on function public.developer_get_my_conversation() from public;
 revoke all on function public.developer_send_message(text) from public;
 revoke all on function public.developer_get_staff_conversations() from public;
