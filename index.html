@@ -9048,40 +9048,31 @@ async function openDeveloperMessages() {
 
 async function closeDeveloperMessages() {
     const wasStaffChat = isStaffAccount() && !!developerActiveConversationId;
-    const conversationId = developerActiveConversationId;
 
     /*
-       Сначала закрываем окно и сразу убираем локальный unread.
-       Это важно и для обычного ✕, и для кнопки «Назад» телефона:
-       визуальный индикатор не должен ждать завершения RPC.
+       Закрытие окна само по себе НЕ означает прочтение.
+       Для клиента особенно важно не гасить unread, если окно
+       закрылось системной кнопкой «Назад» и переписка фактически
+       не была открыта.
+       
+       Если переписка уже была открыта, developer_mark_read()
+       вызывается в loadDeveloperClientConversation()/refresh...
+       Поэтому здесь повторно читать ничего не нужно.
     */
     const bg = document.getElementById("developerMessagesModalBg");
     if (bg) bg.style.display = "none";
 
-    if (isStaffAccount()) {
-        updateDeveloperMessagesButton(0);
-    } else {
-        updateDeveloperClientMessagesButton(0);
-    }
-
     developerActiveConversationId = null;
     showDeveloperMessagesStatus("");
 
-    if (wasStaffChat && conversationId) {
-        try {
-            await api("rpc/developer_mark_read", {
-                method: "POST",
-                body: JSON.stringify({
-                    p_conversation_id: conversationId
-                })
-            });
-        } catch (error) {
-            console.warn("Не удалось подтвердить прочтение при закрытии чата:", error);
-        }
-
-        if (isStaffAccount()) {
-            await refreshDeveloperMessagesBadge();
-        }
+    /*
+       После закрытия просто синхронизируем индикатор с сервером.
+       Так unread не исчезает только из-за закрытия модального окна.
+    */
+    if (isStaffAccount()) {
+        await refreshDeveloperMessagesBadge();
+    } else {
+        await refreshDeveloperClientMessagesBadge();
     }
 }
 
