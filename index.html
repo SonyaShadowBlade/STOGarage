@@ -815,6 +815,8 @@
     .rental-stat-label{font-size:12px;color:#64748b;margin-bottom:4px}
     .rental-stat-value{font-size:20px;font-weight:900}
     .rental-record{border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-top:10px;background:#fff}
+    .rental-record.rental-trip-active{background:#dcfce7;border-color:#86efac}
+    .rental-record.rental-trip-completed{background:#fee2e2;border-color:#fca5a5}
     .rental-record-title{font-weight:800;margin-bottom:5px}
     .rental-record-meta{color:#64748b;font-size:13px;line-height:1.5}
     .rental-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
@@ -3570,7 +3572,8 @@ async function renderRentalDashboard(){
             const status = r.status === "completed" ? "Завершена" : "Активна";
             const endText = hasEnd ? Number(r.endMileage).toLocaleString("ru-RU")+" км" : "—";
             const kmText = hasEnd ? d.toLocaleString("ru-RU")+" км" : "пробег ещё не завершён";
-            return '<div class="rental-record"><div class="rental-record-title">🛣 Поездка — '+escapeHtml(r.date||"")+' '+escapeHtml(r.time||"")+' · <strong>'+status+'</strong></div><div class="rental-record-meta">Водитель: '+escapeHtml(r.driver||"—")+' · '+Number(r.startMileage).toLocaleString("ru-RU")+' → '+endText+' · '+kmText+'<br>'+escapeHtml(r.note||"")+'</div></div>';
+            const tripClass = r.status === "completed" ? "rental-trip-completed" : "rental-trip-active";
+            return '<div class="rental-record '+tripClass+'"><div class="rental-record-title">🛣 Поездка — '+escapeHtml(r.date||"")+' '+escapeHtml(r.time||"")+' · <strong>'+status+'</strong></div><div class="rental-record-meta">Водитель: '+escapeHtml(r.driver||"—")+' · '+Number(r.startMileage).toLocaleString("ru-RU")+' → '+endText+' · '+kmText+'<br>'+escapeHtml(r.note||"")+'</div></div>';
         }
         if(r.type==="fuel")
             return '<div class="rental-record"><div class="rental-record-title">⛽ Заправка — '+escapeHtml(r.date||"")+' '+escapeHtml(r.time||"")+'</div><div class="rental-record-meta">'+Number(r.liters||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+' л · '+Number(r.cost||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+' '+escapeHtml(r.currency||"BYN")+' · '+Number(r.pricePerLiter||0).toLocaleString("ru-RU",{maximumFractionDigits:3})+' '+escapeHtml(r.currency||"BYN")+'/л · пробег '+Number(r.mileage||0).toLocaleString("ru-RU")+' км<br>'+escapeHtml(r.note||"")+'</div></div>';
@@ -3615,6 +3618,7 @@ async function saveRentalTrip(){
             document.getElementById("rentalTripStart").value=hasEnd?b:"";
             document.getElementById("rentalTripEnd").value="";
             document.getElementById("rentalTripNote").value="";
+            closeRentalEntryModal();
             rentalSaved(hasEnd?"Поездка завершена и сохранена.":"Поездка сохранена как активная.");
         }
     }catch(error){
