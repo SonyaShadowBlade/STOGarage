@@ -807,7 +807,9 @@
 }
 
     .rental-button{background:#0f766e;color:white}
-    .rental-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+    .rental-action-buttons{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+    .rental-action-button{min-height:54px;font-size:17px;font-weight:800}
+    .rental-summary{display:none;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
     .rental-stat{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:12px}
     .rental-stat-label{font-size:12px;color:#64748b;margin-bottom:4px}
     .rental-stat-value{font-size:20px;font-weight:900}
@@ -816,7 +818,7 @@
     .rental-record-meta{color:#64748b;font-size:13px;line-height:1.5}
     .rental-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
     .rental-tab.active{background:#0f766e;color:white}
-    @media(max-width:800px){.rental-summary{grid-template-columns:1fr 1fr}}
+    @media(max-width:800px){.rental-summary{grid-template-columns:1fr 1fr}.rental-action-buttons{grid-template-columns:1fr}}
 
     .sanechka-profile {
         display: flex;
@@ -1144,11 +1146,86 @@
 <div class="modal-header"><div><h2>🚚 Аренда — <span id="rentalClientName"></span></h2><div style="color:#64748b;font-size:13px">Кабинет аренды автомобиля</div></div><button class="btn-secondary" onclick="closeRentalModal()">✕</button></div>
 <div id="rentalStatus" class="status" style="display:none"></div>
 <div class="field"><label>Автомобиль</label><select id="rentalVehicleSelect" onchange="renderRentalDashboard()"></select></div>
-<div class="rental-summary"><div class="rental-stat"><div class="rental-stat-label">Текущий пробег</div><div class="rental-stat-value" id="rentalCurrentMileage">—</div></div><div class="rental-stat"><div class="rental-stat-label">Километров</div><div class="rental-stat-value" id="rentalTotalKm">0</div></div><div class="rental-stat"><div class="rental-stat-label">Топливо</div><div class="rental-stat-value" id="rentalFuelTotal">0</div></div><div class="rental-stat"><div class="rental-stat-label">Расходы</div><div class="rental-stat-value" id="rentalExpenseTotal">0</div></div></div>
-<div class="rental-tabs"><button id="rentalTabTrip" class="btn-secondary rental-tab active" onclick="showRentalTab('trip')">🛣 Поездка</button><button id="rentalTabFuel" class="btn-secondary rental-tab" onclick="showRentalTab('fuel')">⛽ Заправка</button><button id="rentalTabIssue" class="btn-secondary rental-tab" onclick="showRentalTab('issue')">⚠️ Проблема</button></div>
-<div id="rentalTripPanel"><div class="grid-2"><div class="field"><label>Водитель</label><input id="rentalTripDriver"></div><div class="field"><label>Дата</label><input id="rentalTripDate" type="date"></div><div class="field"><label>Начальный пробег, км</label><input id="rentalTripStart" type="number" min="0"></div><div class="field"><label>Конечный пробег, км</label><input id="rentalTripEnd" type="number" min="0"></div><div class="field" style="grid-column:1/-1"><label>Маршрут / примечание</label><input id="rentalTripNote"></div></div><button class="btn-success" onclick="saveRentalTrip()">＋ Сохранить поездку</button></div>
-<div id="rentalFuelPanel" style="display:none"><div class="grid-2"><div class="field"><label>Дата</label><input id="rentalFuelDate" type="date"></div><div class="field"><label>Пробег, км</label><input id="rentalFuelMileage" type="number" min="0"></div><div class="field"><label>Количество топлива, л</label><input id="rentalFuelLiters" type="number" min="0" step="0.01"></div><div class="field"><label>Стоимость</label><input id="rentalFuelCost" type="number" min="0" step="0.01"></div><div class="field" style="grid-column:1/-1"><label>Комментарий</label><input id="rentalFuelNote"></div></div><button class="btn-success" onclick="saveRentalFuel()">＋ Сохранить заправку</button></div>
-<div id="rentalIssuePanel" style="display:none"><div class="grid-2"><div class="field"><label>Дата</label><input id="rentalIssueDate" type="date"></div><div class="field"><label>Пробег, км</label><input id="rentalIssueMileage" type="number" min="0"></div><div class="field" style="grid-column:1/-1"><label>Что произошло</label><textarea id="rentalIssueText"></textarea></div></div><button class="btn-danger" onclick="saveRentalIssue()">＋ Сохранить проблему</button></div>
+<div class="rental-action-buttons">
+    <button class="btn-primary rental-action-button" onclick="showRentalTab('trip')">🛣 Добавить поездку</button>
+    <button class="btn-secondary rental-action-button" onclick="showRentalTab('fuel')">⛽ Добавить заправку</button>
+</div>
+
+<div id="rentalTripPanel">
+    <div class="grid-2">
+        <div class="field">
+            <label>Водитель</label>
+            <select id="rentalTripDriver">
+                <option value="Александр">Александр</option>
+                <option value="Артём">Артём</option>
+            </select>
+        </div>
+        <div class="field">
+            <label>Дата</label>
+            <input id="rentalTripDate" type="date">
+        </div>
+        <div class="field">
+            <label>Время</label>
+            <input id="rentalTripTime" type="time">
+        </div>
+        <div class="field">
+            <label>Начальный пробег, км</label>
+            <input id="rentalTripStart" type="number" min="0">
+        </div>
+        <div class="field">
+            <label>Конечный пробег, км</label>
+            <input id="rentalTripEnd" type="number" min="0">
+        </div>
+        <div class="field" style="grid-column:1/-1">
+            <label>Маршрут / примечание</label>
+            <input id="rentalTripNote">
+        </div>
+    </div>
+    <button class="btn-success" onclick="saveRentalTrip()">＋ Сохранить поездку</button>
+</div>
+
+<div id="rentalFuelPanel" style="display:none">
+    <div class="grid-2">
+        <div class="field">
+            <label>Дата</label>
+            <input id="rentalFuelDate" type="date">
+        </div>
+        <div class="field">
+            <label>Время</label>
+            <input id="rentalFuelTime" type="time">
+        </div>
+        <div class="field">
+            <label>Пробег, км</label>
+            <input id="rentalFuelMileage" type="number" min="0">
+        </div>
+        <div class="field">
+            <label>Количество топлива, л</label>
+            <input id="rentalFuelLiters" type="number" min="0" step="0.01" oninput="calculateRentalFuelPrice()">
+        </div>
+        <div class="field">
+            <label>Общая стоимость</label>
+            <input id="rentalFuelCost" type="number" min="0" step="0.01" oninput="calculateRentalFuelPrice()">
+        </div>
+        <div class="field">
+            <label>Цена за литр</label>
+            <input id="rentalFuelPricePerLiter" type="number" step="0.001" readonly>
+        </div>
+        <div class="field">
+            <label>Валюта</label>
+            <select id="rentalFuelCurrency">
+                <option value="BYN">BYN</option>
+                <option value="EUR">EUR</option>
+                <option value="USD">USD</option>
+                <option value="RUB">RUB</option>
+            </select>
+        </div>
+        <div class="field" style="grid-column:1/-1">
+            <label>Примечание</label>
+            <input id="rentalFuelNote">
+        </div>
+    </div>
+    <button class="btn-success" onclick="saveRentalFuel()">＋ Сохранить заправку</button>
+</div>
 <div style="margin-top:22px"><h3>История аренды</h3><div id="rentalHistory"></div></div>
 <div style="margin-top:18px;text-align:right"><button class="btn-secondary" onclick="closeRentalModal()">Закрыть</button></div>
 </div></div>
@@ -3399,17 +3476,34 @@ function openRentalModal(){
         select.value = iveco.id;
     }
 
-    const today = new Date().toISOString().slice(0, 10);
-    ["rentalTripDate","rentalFuelDate","rentalIssueDate"].forEach(id => {
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const time = now.toTimeString().slice(0, 5);
+
+    ["rentalTripDate","rentalFuelDate"].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = today;
     });
+    ["rentalTripTime","rentalFuelTime"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = time;
+    });
+
+    const driver = document.getElementById("rentalTripDriver");
+    if (driver && !driver.value) driver.value = "Александр";
 
     renderRentalDashboard();
 }
 function closeRentalModal(){document.getElementById("rentalModalBg").style.display="none";rentalClientId=null}
 function selectedRentalVehicle(){return rentalVehicleList().find(v=>v.id===document.getElementById("rentalVehicleSelect").value)||null}
-function showRentalTab(tab){["trip","fuel","issue"].forEach(n=>{const C=n.charAt(0).toUpperCase()+n.slice(1);document.getElementById("rental"+C+"Panel").style.display=n===tab?"block":"none";document.getElementById("rentalTab"+C).classList.toggle("active",n===tab)})}
+function showRentalTab(tab){
+    ["trip","fuel"].forEach(n=>{
+        const C=n.charAt(0).toUpperCase()+n.slice(1);
+        const panel=document.getElementById("rental"+C+"Panel");
+        if(panel) panel.style.display=n===tab?"block":"none";
+    });
+    if(tab==="fuel") calculateRentalFuelPrice();
+}
 async function renderRentalDashboard(){
     const v=selectedRentalVehicle();
     if(!v)return;
@@ -3464,7 +3558,8 @@ async function saveRentalTrip(){
         if(await addRentalRecord({
             type:"trip",
             date:document.getElementById("rentalTripDate").value,
-            driver:document.getElementById("rentalTripDriver").value.trim(),
+            time:document.getElementById("rentalTripTime").value,
+            driver:document.getElementById("rentalTripDriver").value,
             startMileage:a,
             endMileage:b,
             note:document.getElementById("rentalTripNote").value.trim()
@@ -3482,6 +3577,16 @@ async function saveRentalTrip(){
         alert("Не удалось сохранить поездку:\n\n"+error.message);
     }
 }
+function calculateRentalFuelPrice(){
+    const liters=Number(document.getElementById("rentalFuelLiters")?.value);
+    const cost=Number(document.getElementById("rentalFuelCost")?.value);
+    const price=document.getElementById("rentalFuelPricePerLiter");
+    if(!price)return;
+    price.value=Number.isFinite(liters)&&liters>0&&Number.isFinite(cost)&&cost>=0
+        ? (cost/liters).toFixed(3)
+        : "";
+}
+
 async function saveRentalFuel(){
     const l=Number(document.getElementById("rentalFuelLiters").value);
     const c=Number(document.getElementById("rentalFuelCost").value);
@@ -3492,9 +3597,12 @@ async function saveRentalFuel(){
         if(await addRentalRecord({
             type:"fuel",
             date:document.getElementById("rentalFuelDate").value,
+            time:document.getElementById("rentalFuelTime").value,
             mileage:m,
             liters:l,
             cost:Number.isFinite(c)&&c>=0?c:0,
+            currency:document.getElementById("rentalFuelCurrency").value,
+            pricePerLiter:l>0&&Number.isFinite(c)&&c>=0?c/l:0,
             note:document.getElementById("rentalFuelNote").value.trim()
         })){
             document.getElementById("rentalFuelLiters").value="";
