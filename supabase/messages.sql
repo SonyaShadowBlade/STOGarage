@@ -201,6 +201,7 @@ begin
                         case when dm.is_read then 'read' else 'delivered' end
                     else null
                 end
+            )
             order by dm.created_at
         ),
         '[]'::jsonb
