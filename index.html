@@ -916,6 +916,206 @@
     .sanechka-service-history .service-card { margin-top:10px; }
     .sanechka-service-back { margin-bottom:14px; }
     @media(max-width:700px) { .sanechka-main-button { min-height:105px; font-size:24px; } }
+
+    /* =====================================================
+       МОБИЛЬНАЯ АДАПТАЦИЯ ОСНОВНОГО ИНТЕРФЕЙСА СТО
+       Не меняет логику приложения — только размеры/раскладку.
+    ===================================================== */
+    html, body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    img, video, canvas, iframe {
+        max-width: 100%;
+    }
+
+    button, input, select, textarea {
+        box-sizing: border-box;
+        max-width: 100%;
+    }
+
+    .container,
+    .clients-list,
+    .client-card,
+    .vehicle-card,
+    .service-card,
+    .modal {
+        min-width: 0;
+    }
+
+    @media (max-width: 700px) {
+        body {
+            overflow-x: hidden;
+        }
+
+        header {
+            display: flex;
+            flex-wrap: wrap !important;
+            align-items: center;
+            gap: 8px !important;
+            padding: 12px 10px !important;
+            font-size: 20px !important;
+        }
+
+        header > * {
+            min-width: 0;
+        }
+
+        .user-greeting {
+            order: 3;
+            width: 100%;
+            margin-left: 0 !important;
+            justify-content: center;
+            white-space: normal;
+            text-align: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 100%;
+            margin: 12px auto;
+            padding: 0 10px;
+        }
+
+        .search-box,
+        .client-card,
+        .vehicle-card,
+        .service-card {
+            width: 100%;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        .modal-bg {
+            padding: 10px !important;
+        }
+
+        .modal {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 auto;
+            padding: 14px !important;
+            border-radius: 12px;
+            overflow-x: hidden;
+        }
+
+        .modal-header {
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .modal-header h2 {
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .grid-2,
+        .grid-3 {
+            grid-template-columns: minmax(0, 1fr) !important;
+        }
+
+        .line-row,
+        .line-row.parts,
+        .line-summary-row {
+            grid-template-columns: minmax(0, 1fr) !important;
+            min-width: 0;
+        }
+
+        .service-header,
+        .service-history-heading {
+            flex-wrap: wrap;
+        }
+
+        .vehicle-investment-total {
+            max-width: 100%;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+
+        .form-buttons,
+        .vehicle-actions {
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .form-buttons button,
+        .vehicle-actions button {
+            flex: 1 1 140px;
+            min-width: 0;
+        }
+
+        .rental-entry-actions {
+            width: 100%;
+            flex-direction: column;
+        }
+
+        .rental-entry-actions .rental-action-button {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .developer-chat-list {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        .developer-chat-message {
+            max-width: 94%;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .developer-message-composer {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .developer-message-composer textarea {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .developer-message-actions {
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .developer-message-actions button {
+            max-width: 100%;
+        }
+
+        table {
+            max-width: 100%;
+        }
+    }
+
+    @media (max-width: 480px) {
+        header {
+            font-size: 18px !important;
+        }
+
+        .container {
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+
+        .modal-bg {
+            padding: 6px !important;
+        }
+
+        .modal {
+            padding: 12px !important;
+        }
+
+        .form-buttons button,
+        .vehicle-actions button {
+            flex-basis: 100%;
+        }
+    }
+
 </style>
 </head>
 
