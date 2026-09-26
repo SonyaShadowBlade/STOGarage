@@ -630,6 +630,44 @@ $$;
 revoke all on function public.developer_edit_message(uuid,text) from public;
 grant execute on function public.developer_edit_message(uuid,text) to authenticated;
 
+-- Удаление собственных сообщений.
+-- Сервер дополнительно проверяет sender_user_id = auth.uid(),
+-- поэтому удалить чужое сообщение через RPC нельзя.
+create or replace function public.developer_delete_message(
+    p_message_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $
+declare
+    deleted_message public.developer_messages;
+begin
+    if auth.uid() is null then
+        raise exception 'Требуется авторизация';
+    end if;
+
+    delete from public.developer_messages
+    where id = p_message_id
+      and sender_user_id = auth.uid()
+    returning * into deleted_message;
+
+    if not found then
+        raise exception 'Можно удалять только свои сообщения';
+    end if;
+
+    return jsonb_build_object(
+        'id', deleted_message.id,
+        'conversation_id', deleted_message.conversation_id
+    );
+end;
+$;
+
+revoke all on function public.developer_delete_message(uuid) from public;
+grant execute on function public.developer_delete_message(uuid) to authenticated;
+
+
 revoke all on function public.developer_get_my_conversation() from public;
 revoke all on function public.developer_send_message(text) from public;
 revoke all on function public.developer_get_staff_conversations() from public;
