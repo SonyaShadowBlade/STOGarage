@@ -8787,12 +8787,12 @@ function renderDeveloperChatMessages(targetId, messages) {
     el.innerHTML = messages.map(m => {
         const side = m.sender_side === "staff" ? "staff" : "client";
         const title = side === "staff" ? "СТО" : "Клиент";
-        const messageId = String(m.id || "").replace(/'/g, "\\\'");
+        const messageId = String(m.id || "");
         const ownMessage =
             (side === "staff" && isStaffAccount()) ||
             (side === "client" && isClientAccount());
         const editButton = ownMessage && m.id
-            ? '<button class="developer-message-edit" type="button" onclick="event.stopPropagation(); editDeveloperMessage(\\''+messageId+'\\')">✏️ Изменить</button>'
+            ? "<button class=\"developer-message-edit\" type=\"button\" onclick=\"event.stopPropagation(); editDeveloperMessage('" + escapeAttr(messageId) + "')\">✏️ Изменить</button>"
             : "";
         return '<div class="developer-chat-message '+side+'"><div class="developer-chat-message-meta"><span>'+title+' · '+escapeHtml(formatDeveloperMessageDate(m.created_at))+'</span>'+editButton+'</div><div>'+escapeHtml(m.body || "")+'</div></div>';
     }).join("");
