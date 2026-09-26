@@ -292,6 +292,46 @@ begin
 end;
 $$;
 
+create or replace function public.developer_edit_message(
+    p_message_id uuid,
+    p_body text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $
+declare
+    message_text text;
+begin
+    message_text := btrim(coalesce(p_body, ''));
+
+    if message_text = '' then
+        raise exception 'Сообщение не может быть пустым';
+    end if;
+
+    if length(message_text) > 5000 then
+        raise exception 'Сообщение слишком длинное';
+    end if;
+
+    if not exists (
+        select 1
+        from public.developer_messages m
+        where m.id = p_message_id
+          and m.sender_user_id = auth.uid()
+    ) then
+        raise exception 'Можно изменять только свои сообщения';
+    end if;
+
+    update public.developer_messages
+    set body = message_text
+    where id = p_message_id
+      and sender_user_id = auth.uid();
+
+    return true;
+end;
+$;
+
 create or replace function public.developer_mark_read(p_conversation_id uuid)
 returns boolean
 language plpgsql
