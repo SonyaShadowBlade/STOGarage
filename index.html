@@ -9094,23 +9094,12 @@ async function closeDeveloperMessages() {
             const conversation = data && data.conversation;
 
             if (conversation && conversation.id) {
-                const markReadResult = await api("rpc/developer_mark_read", {
+                await api("rpc/developer_mark_read", {
                     method: "POST",
                     body: JSON.stringify({
                         p_conversation_id: conversation.id
                     })
                 });
-
-                /*
-                   Временная диагностика: показываем реальный ответ RPC
-                   прямо в окне чата, чтобы проверить, выполняется ли
-                   developer_mark_read от авторизованного пользователя.
-                */
-                console.log("developer_mark_read result:", markReadResult);
-                showDeveloperMessagesStatus(
-                    "Диагностика mark_read: " +
-                    JSON.stringify(markReadResult)
-                );
             }
 
             updateDeveloperClientMessagesButton(0);
@@ -9134,16 +9123,10 @@ async function loadDeveloperClientConversation() {
         const conversation = data && data.conversation;
 
         if (conversation && conversation.id) {
-            const markReadResult = await api("rpc/developer_mark_read",{
+            await api("rpc/developer_mark_read",{
                 method:"POST",
                 body:JSON.stringify({p_conversation_id:conversation.id})
             });
-
-            console.log("developer_mark_read result:", markReadResult);
-            showDeveloperMessagesStatus(
-                "Диагностика mark_read: " +
-                JSON.stringify(markReadResult)
-            );
         }
 
         const refreshed = conversation && conversation.id
@@ -9334,31 +9317,18 @@ async function refreshDeveloperActiveConversation() {
 
             const conversation = data && data.conversation;
 
-            /*
-               Сначала фиксируем прочтение входящих сообщений,
-               затем повторно получаем переписку. Так статус ✓✓
-               сразу строится из уже актуального состояния чтения.
-            */
             if (conversation && conversation.id) {
                 try {
-                    const markReadResult = await api("rpc/developer_mark_read", {
+                    await api("rpc/developer_mark_read", {
                         method: "POST",
                         body: JSON.stringify({
                             p_conversation_id: conversation.id
                         })
                     });
-
-                    console.log("[DEV CHAT DIAG] client mark_read OK:", markReadResult);
                 } catch (markReadError) {
-                    console.error("[DEV CHAT DIAG] client mark_read ERROR:", markReadError);
+                    console.error("Не удалось отметить сообщения прочитанными:", markReadError);
                 }
-            } else {
-                console.warn("[DEV CHAT DIAG] client conversation.id отсутствует:", conversation, data);
             }
-
-            console.log("[DEV CHAT DIAG] client conversation:", conversation);
-            console.log("[DEV CHAT DIAG] client message count:", data && Array.isArray(data.messages) ? data.messages.length : null);
-            console.log("[DEV CHAT DIAG] client unread count:", data && data.unread_for_client_count);
 
             const refreshed = conversation && conversation.id
                 ? await api("rpc/developer_get_my_conversation_v2", {
