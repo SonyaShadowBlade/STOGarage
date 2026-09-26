@@ -883,7 +883,9 @@
     .developer-chat-message{max-width:88%;padding:10px 12px;border-radius:12px;margin-top:9px;line-height:1.45;white-space:pre-wrap}
     .developer-chat-message.client{background:#f3f4f6;margin-right:auto}
     .developer-chat-message.staff{background:#dbeafe;margin-left:auto}
-    .developer-chat-message-meta{font-size:11px;color:#64748b;margin-bottom:3px}
+    .developer-chat-message-meta{font-size:11px;color:#64748b;margin-bottom:3px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .developer-message-edit{padding:2px 6px;font-size:10px;border:1px solid #d1d5db;background:#fff;color:#475569;border-radius:6px;white-space:nowrap}
+    .developer-message-edit:hover{background:#f8fafc}
 
     .sanechka-readonly-note { margin-top:16px; padding:12px 14px; border-radius:12px; background:#f8fafc; color:#64748b; font-size:13px; line-height:1.5; text-align:center; }
     .sanechka-service-vehicle { border:1px solid #e5e7eb; border-radius:12px; padding:14px; margin-top:10px; background:#fff; cursor:pointer; }
@@ -1812,7 +1814,7 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.18";
+const APP_VERSION = "0.3.19";
 
 function showVersionCheck(text, success = false) {
     const bg = document.getElementById("versionCheckBg");
@@ -8785,7 +8787,14 @@ function renderDeveloperChatMessages(targetId, messages) {
     el.innerHTML = messages.map(m => {
         const side = m.sender_side === "staff" ? "staff" : "client";
         const title = side === "staff" ? "СТО" : "Клиент";
-        return '<div class="developer-chat-message '+side+'"><div class="developer-chat-message-meta">'+title+' · '+escapeHtml(formatDeveloperMessageDate(m.created_at))+'</div><div>'+escapeHtml(m.body || "")+'</div></div>';
+        const messageId = String(m.id || "").replace(/'/g, "\\\'");
+        const ownMessage =
+            (side === "staff" && isStaffAccount()) ||
+            (side === "client" && isClientAccount());
+        const editButton = ownMessage && m.id
+            ? '<button class="developer-message-edit" type="button" onclick="event.stopPropagation(); editDeveloperMessage(\\''+messageId+'\\')">✏️ Изменить</button>'
+            : "";
+        return '<div class="developer-chat-message '+side+'"><div class="developer-chat-message-meta"><span>'+title+' · '+escapeHtml(formatDeveloperMessageDate(m.created_at))+'</span>'+editButton+'</div><div>'+escapeHtml(m.body || "")+'</div></div>';
     }).join("");
 
     el.dataset.chatInitialized = "1";
@@ -8799,6 +8808,89 @@ function renderDeveloperChatMessages(targetId, messages) {
         */
         const heightDifference = el.scrollHeight - previousScrollHeight;
         el.scrollTop = Math.max(0, previousScrollTop + heightDifference);
+    }
+}
+
+async function editDeveloperMessage(messageId) {
+    if (!messageId) return;
+
+    const messagesTarget =
+        isStaffAccount()
+            ? "developerStaffChat"
+            : "developerClientChat";
+
+    const chat = document.getElementById(messagesTarget);
+    let currentMessage = null;
+
+    if (chat) {
+        const messageNodes = Array.from(
+            chat.querySelectorAll(".developer-chat-message")
+        );
+        // Текст берём из загруженной переписки ниже, чтобы не редактировать
+        // чужое сообщение через случайный DOM-элемент.
+    }
+
+    try {
+        const data = isStaffAccount()
+            ? await api("rpc/developer_get_conversation_messages", {
+                method: "POST",
+                body: JSON.stringify({
+                    p_conversation_id: developerActiveConversationId
+                })
+            })
+            : await api("rpc/developer_get_my_conversation", {
+                method: "POST",
+                body: JSON.stringify({})
+            });
+
+        const messages = isStaffAccount()
+            ? (Array.isArray(data) ? data : [])
+            : (data && Array.isArray(data.messages) ? data.messages : []);
+
+        currentMessage = messages.find(
+            m => m && String(m.id) === String(messageId)
+        );
+
+        if (!currentMessage) {
+            showDeveloperMessagesStatus("Сообщение не найдено.", true);
+            return;
+        }
+
+        const nextText = prompt(
+            "Изменить сообщение:",
+            String(currentMessage.body || "")
+        );
+
+        if (nextText === null) return;
+
+        const body = nextText.trim();
+
+        if (!body) {
+            showDeveloperMessagesStatus("Сообщение не может быть пустым.", true);
+            return;
+        }
+
+        await api("rpc/developer_edit_message", {
+            method: "POST",
+            body: JSON.stringify({
+                p_message_id: messageId,
+                p_body: body
+            })
+        });
+
+        if (isStaffAccount()) {
+            await openDeveloperConversation(developerActiveConversationId);
+        } else {
+            await loadDeveloperClientConversation();
+        }
+
+        showDeveloperMessagesStatus("Сообщение изменено.");
+    } catch (error) {
+        console.error("Ошибка изменения сообщения:", error);
+        showDeveloperMessagesStatus(
+            "Не удалось изменить сообщение: " + error.message,
+            true
+        );
     }
 }
 
