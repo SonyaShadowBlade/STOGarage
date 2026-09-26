@@ -8618,6 +8618,7 @@ const STO_MODAL_HISTORY_IDS = [
 
 let stoModalHistoryStack = [];
 let stoModalHistoryHandlingPop = false;
+let stoModalHistoryProgrammaticBack = false;
 let stoModalHistoryObserver = null;
 
 function getVisibleStoModals() {
@@ -8723,15 +8724,11 @@ function stoHandleModalClosed(modalId) {
         двигаемся на одну запись назад, чтобы история браузера
         не накапливала фантомные состояния.
     */
-    stoModalHistoryHandlingPop = true;
+    stoModalHistoryProgrammaticBack = true;
 
     stoRemoveModalFromHistory(modalId);
 
     history.back();
-
-    setTimeout(() => {
-        stoModalHistoryHandlingPop = false;
-    }, 150);
 }
 
 function initStoModalHistory() {
@@ -8800,6 +8797,11 @@ function initStoModalHistory() {
     });
 
     window.addEventListener("popstate", () => {
+        if (stoModalHistoryProgrammaticBack) {
+            stoModalHistoryProgrammaticBack = false;
+            return;
+        }
+
         const visible = getVisibleStoModals();
 
         if (!visible.length && !stoModalHistoryStack.length) {
