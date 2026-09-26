@@ -891,6 +891,14 @@
         font-style:italic;
         font-weight:700;
     }
+    .developer-message-status{
+        margin-left:6px;
+        font-size:12px;
+        font-weight:900;
+        letter-spacing:-2px;
+    }
+    .developer-message-status.delivered{color:#94a3b8}
+    .developer-message-status.read{color:#2563eb}
 
 .developer-chat-message-meta{font-size:11px;color:#64748b;margin-bottom:3px;display:flex;align-items:center;justify-content:space-between;gap:8px}
     .developer-message-edit{padding:2px 6px;font-size:10px;border:1px solid #d1d5db;background:#fff;color:#475569;border-radius:6px;white-space:nowrap}
@@ -8876,10 +8884,21 @@ function renderDeveloperChatMessages(targetId, messages) {
             ? ' <span class="developer-message-edited-inline">изменено</span>'
             : "";
 
+        let deliveryLabel = "";
+        if (ownMessage) {
+            const status = String(m.message_status || "").toLowerCase();
+            if (status === "read") {
+                deliveryLabel = ' <span class="developer-message-status read" title="Прочитано">✓✓</span>';
+            } else if (status === "delivered") {
+                deliveryLabel = ' <span class="developer-message-status delivered" title="Доставлено">✓</span>';
+            }
+        }
+
         return '<div class="developer-chat-message ' + side +
             '"><div class="developer-chat-message-meta"><span>' +
             title + ' · ' + escapeHtml(formatDeveloperMessageDate(m.created_at)) +
             editedLabel +
+            deliveryLabel +
             '</span>' + editButton +
             '</div><div>' + escapeHtml(m.body || "") +
             '</div></div>';
@@ -9131,7 +9150,12 @@ async function openDeveloperConversation(id) {
         renderDeveloperChatMessages("developerStaffChat",Array.isArray(messages)?messages:[]);
         await api("rpc/developer_mark_read",{method:"POST",body:JSON.stringify({p_conversation_id:id})});
         if(item&&item.conversation) item.conversation.unread_for_staff_count=0;
-        updateDeveloperMessagesButton(developerMessagesConversations.filter(x=>x&&x.conversation&&x.conversation.unread_for_staff).length);
+        updateDeveloperMessagesButton(
+            developerMessagesConversations.reduce(
+                (sum, x) => sum + (Number(x && x.conversation && x.conversation.unread_for_staff_count) || 0),
+                0
+            )
+        );
     } catch(error) {
         console.error("Ошибка открытия обращения:",error);
         showDeveloperMessagesStatus("Не удалось открыть переписку: "+error.message,true);
@@ -9237,11 +9261,21 @@ async function refreshDeveloperMessagesNow() {
     developerMessagesRefreshInProgress = true;
 
     try {
-        await Promise.allSettled([
-            refreshDeveloperMessagesBadge(),
-            refreshDeveloperClientMessagesBadge(),
-            refreshDeveloperActiveConversation()
-        ]);
+        const bg = document.getElementById("developerMessagesModalBg");
+        const chatOpen = !!bg && getComputedStyle(bg).display !== "none";
+        const staffChatOpen = chatOpen && isStaffAccount() && !!developerActiveConversationId;
+        const clientChatOpen = chatOpen && isClientAccount();
+
+        const tasks = [refreshDeveloperActiveConversation()];
+
+        if (!staffChatOpen) {
+            tasks.push(refreshDeveloperMessagesBadge());
+        }
+        if (!clientChatOpen) {
+            tasks.push(refreshDeveloperClientMessagesBadge());
+        }
+
+        await Promise.allSettled(tasks);
     } finally {
         developerMessagesRefreshInProgress = false;
     }
