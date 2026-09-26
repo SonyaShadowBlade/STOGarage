@@ -1838,7 +1838,7 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.19";
+const APP_VERSION = "0.3.20";
 
 function showVersionCheck(text, success = false) {
     const bg = document.getElementById("versionCheckBg");
@@ -9342,7 +9342,11 @@ async function refreshDeveloperActiveConversation() {
             updateDeveloperClientMessagesButton(0);
         }
     } catch (error) {
-        console.warn("Не удалось обновить открытую переписку:", error);
+        console.error("Не удалось обновить открытую переписку:", error);
+        showDeveloperMessagesStatus(
+            "Ошибка обновления чата: " + error.message,
+            true
+        );
     }
 }
 
@@ -9384,9 +9388,12 @@ setInterval(() => {
 
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
-    refreshDeveloperMessagesBadge();
-    refreshDeveloperClientMessagesBadge();
-    refreshDeveloperActiveConversation();
+    /*
+       Не запускаем три независимых запроса одновременно.
+       Для клиента это могло создавать гонку: старый unread-счётчик
+       возвращался после mark_read() и снова включал жёлтый индикатор.
+    */
+    refreshDeveloperMessagesNow();
 });
 
 window.addEventListener("focus", () => {
