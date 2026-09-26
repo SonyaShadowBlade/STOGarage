@@ -8752,7 +8752,7 @@ async function refreshDeveloperClientMessagesBadge() {
             body: JSON.stringify({})
         });
         const conversation = data && data.conversation;
-        updateDeveloperClientMessagesButton(!!(conversation && conversation.unread_for_client));
+        updateDeveloperClientMessagesButton(!!(data && data.unread_for_client));
     } catch (error) {
         console.warn("Не удалось обновить уведомление клиента:", error);
     }
@@ -9038,7 +9038,7 @@ async function loadDeveloperClientConversation() {
         const conversation = data && data.conversation;
         const messages = data && Array.isArray(data.messages) ? data.messages : [];
         renderDeveloperChatMessages("developerClientChat",messages);
-        updateDeveloperClientMessagesButton(!!(conversation && conversation.unread_for_client));
+        updateDeveloperClientMessagesButton(!!(data && data.unread_for_client));
         if (conversation && conversation.id) {
             await api("rpc/developer_mark_read",{method:"POST",body:JSON.stringify({p_conversation_id:conversation.id})});
             updateDeveloperClientMessagesButton(false);
