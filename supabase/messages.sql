@@ -455,15 +455,22 @@ as $$
 $$;
 
 -- Помечаем входящие сообщения клиента прочитанными.
+drop function if exists public.developer_mark_read(uuid);
+
 create or replace function public.developer_mark_read(p_conversation_id uuid)
-returns void
+returns jsonb
 language plpgsql
 security definer
 set search_path = public
-as $$
+as $
+declare
+    current_user_id uuid;
+    read_at timestamptz;
 begin
-    if auth.uid() is null then
-        return;
+    current_user_id := auth.uid();
+
+    if current_user_id is null then
+        raise exception 'developer_mark_read: пользователь не авторизован';
     end if;
 
     if not (
@@ -472,11 +479,13 @@ begin
             select 1
             from public.developer_conversations c
             where c.id = p_conversation_id
-              and c.client_user_id = auth.uid()
+              and c.client_user_id = current_user_id
         )
     ) then
-        return;
+        raise exception 'developer_mark_read: нет доступа к этой переписке';
     end if;
+
+    read_at := now();
 
     insert into public.developer_conversation_reads(
         conversation_id,
@@ -485,18 +494,19 @@ begin
     )
     values (
         p_conversation_id,
-        auth.uid(),
-        now()
+        current_user_id,
+        read_at
     )
     on conflict (conversation_id, user_id)
     do update set last_read_at = excluded.last_read_at;
 
-    -- Состояние прочтения хранится отдельно для каждого пользователя
-    -- в developer_conversation_reads. Поле developer_messages.is_read
-    -- оставляем только для совместимости со старыми данными и больше
-    -- не используем как источник истины.
+    return jsonb_build_object(
+        'conversation_id', p_conversation_id,
+        'user_id', current_user_id,
+        'last_read_at', read_at
+    );
 end;
-$$;
+$;
 
 -- Сотрудник отвечает клиенту.
 create or replace function public.developer_staff_reply(
