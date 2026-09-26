@@ -295,7 +295,7 @@ begin
     values (auth.uid())
     on conflict (client_user_id)
     do update set updated_at = now()
-    returning id into conversation_id;
+    returning id into v_conversation_id;
 
     insert into public.developer_messages(
         conversation_id,
@@ -314,7 +314,7 @@ begin
     returning id into message_id;
 
     return jsonb_build_object(
-        'conversation_id', conversation_id,
+        'conversation_id', v_conversation_id,
         'message_id', message_id
     );
 end;
@@ -712,7 +712,7 @@ set search_path = public
 as $$
 declare
     current_user_id uuid;
-    conversation_id uuid;
+    v_conversation_id uuid;
     conversation_json jsonb;
     messages_json jsonb;
     client_read_at timestamptz;
@@ -724,12 +724,12 @@ begin
     end if;
 
     select dc.id
-    into conversation_id
+    into v_conversation_id
     from public.developer_conversations dc
     where dc.client_user_id = current_user_id
     limit 1;
 
-    if conversation_id is null then
+    if v_conversation_id is null then
         return jsonb_build_object(
             'conversation', null,
             'messages', '[]'::jsonb,
@@ -746,12 +746,12 @@ begin
     )
     into conversation_json
     from public.developer_conversations dc
-    where dc.id = conversation_id;
+    where dc.id = v_conversation_id;
 
     select r.last_read_at
     into client_read_at
     from public.developer_conversation_reads r
-    where r.conversation_id = conversation_id
+    where r.conversation_id = v_conversation_id
       and r.user_id = current_user_id;
 
     select coalesce(
@@ -766,7 +766,7 @@ begin
                         exists (
                             select 1
                             from public.developer_conversation_reads r
-                            where r.conversation_id = conversation_id
+                            where r.conversation_id = v_conversation_id
                               and r.user_id <> current_user_id
                               and r.last_read_at >= dm.created_at
                         )
@@ -783,7 +783,7 @@ begin
                             when exists (
                                 select 1
                                 from public.developer_conversation_reads r
-                                where r.conversation_id = conversation_id
+                                where r.conversation_id = v_conversation_id
                                   and r.user_id <> current_user_id
                                   and r.last_read_at >= dm.created_at
                             ) then 'read'
@@ -804,7 +804,7 @@ begin
     )
     into messages_json
     from public.developer_messages dm
-    where dm.conversation_id = conversation_id;
+    where dm.conversation_id = v_conversation_id;
 
     return jsonb_build_object(
         'conversation', conversation_json,
@@ -813,7 +813,7 @@ begin
         exists (
             select 1
             from public.developer_messages dm
-            where dm.conversation_id = conversation_id
+            where dm.conversation_id = v_conversation_id
               and dm.sender_side = 'staff'
               and dm.created_at > coalesce(client_read_at, 'epoch'::timestamptz)
         ),
@@ -821,7 +821,7 @@ begin
         (
             select count(*)::int
             from public.developer_messages dm
-            where dm.conversation_id = conversation_id
+            where dm.conversation_id = v_conversation_id
               and dm.sender_side = 'staff'
               and dm.created_at > coalesce(client_read_at, 'epoch'::timestamptz)
         )
