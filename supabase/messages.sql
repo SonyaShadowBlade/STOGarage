@@ -198,7 +198,16 @@ begin
                 'message_status',
                 case
                     when dm.sender_side = 'client' then
-                        case when dm.is_read then 'read' else 'delivered' end
+                        case
+                            when exists (
+                                select 1
+                                from public.developer_conversation_reads dcr
+                                where dcr.conversation_id = dm.conversation_id
+                                  and dcr.user_id <> (c->>'client_user_id')::uuid
+                                  and dcr.last_read_at >= dm.created_at
+                            ) then 'read'
+                            else 'delivered'
+                        end
                     else null
                 end
             )
@@ -222,7 +231,13 @@ begin
                 from public.developer_messages dm
                 where dm.conversation_id = (c->>'id')::uuid
                   and dm.sender_side = 'staff'
-                  and dm.is_read = false
+                  and not exists (
+                      select 1
+                      from public.developer_conversation_reads dcr
+                      where dcr.conversation_id = dm.conversation_id
+                        and dcr.user_id = auth.uid()
+                        and dcr.last_read_at >= dm.created_at
+                  )
             )
         end,
         'unread_for_client_count',
@@ -339,7 +354,13 @@ as $$
                     from public.developer_messages um
                     where um.conversation_id = c.id
                       and um.sender_side = 'client'
-                      and um.is_read = false
+                      and not exists (
+                          select 1
+                          from public.developer_conversation_reads dcr
+                          where dcr.conversation_id = um.conversation_id
+                            and dcr.user_id = auth.uid()
+                            and dcr.last_read_at >= um.created_at
+                      )
                 ),
             'unread_for_staff_count',
                 (
@@ -347,7 +368,13 @@ as $$
                     from public.developer_messages um
                     where um.conversation_id = c.id
                       and um.sender_side = 'client'
-                      and um.is_read = false
+                      and not exists (
+                          select 1
+                          from public.developer_conversation_reads dcr
+                          where dcr.conversation_id = um.conversation_id
+                            and dcr.user_id = auth.uid()
+                            and dcr.last_read_at >= um.created_at
+                      )
                 ),
             'updated_at', c.updated_at
         ),
@@ -388,7 +415,18 @@ as $$
         'message_status',
         case
             when dm.sender_side = 'staff' then
-                case when dm.is_read then 'read' else 'delivered' end
+                case
+                    when exists (
+                        select 1
+                        from public.developer_conversation_reads dcr
+                        join public.developer_conversations dc
+                          on dc.id = dm.conversation_id
+                        where dcr.conversation_id = dm.conversation_id
+                          and dcr.user_id = dc.client_user_id
+                          and dcr.last_read_at >= dm.created_at
+                    ) then 'read'
+                    else 'delivered'
+                end
             else null
         end
     )
@@ -509,6 +547,10 @@ end;
 $$;
 
 
+
+-- ВАЖНО: developer_conversation_reads является источником истины для статусов
+-- и непрочитанных сообщений. Поле developer_messages.is_read сохраняется
+-- для совместимости со старыми данными, но новые статусы не зависят от него.
 
 -- Редактирование собственных сообщений.
 -- Клиент может изменить только своё сообщение, сотрудник — только своё.
