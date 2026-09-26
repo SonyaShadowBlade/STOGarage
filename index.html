@@ -9086,7 +9086,27 @@ async function closeDeveloperMessages() {
     if (isStaffAccount()) {
         await refreshDeveloperMessagesBadge();
     } else {
-        await refreshDeveloperClientMessagesBadge();
+        try {
+            const data = await api("rpc/developer_get_my_conversation", {
+                method: "POST",
+                body: JSON.stringify({})
+            });
+            const conversation = data && data.conversation;
+
+            if (conversation && conversation.id) {
+                await api("rpc/developer_mark_read", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        p_conversation_id: conversation.id
+                    })
+                });
+            }
+
+            updateDeveloperClientMessagesButton(0);
+        } catch (error) {
+            console.warn("Не удалось обновить прочитанность чата клиента:", error);
+            await refreshDeveloperClientMessagesBadge();
+        }
     }
 }
 
@@ -9319,9 +9339,7 @@ async function refreshDeveloperActiveConversation() {
                     : [];
 
             renderDeveloperChatMessages("developerClientChat", messages);
-            updateDeveloperClientMessagesButton(
-                refreshed && refreshed.unread_for_client_count
-            );
+            updateDeveloperClientMessagesButton(0);
         }
     } catch (error) {
         console.warn("Не удалось обновить открытую переписку:", error);
