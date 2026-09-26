@@ -8758,16 +8758,48 @@ function formatDeveloperMessageDate(value) {
 function renderDeveloperChatMessages(targetId, messages) {
     const el = document.getElementById(targetId);
     if (!el) return;
+
+    /*
+       Чат обновляется автоматически раз в секунду.
+       Нельзя каждый раз принудительно ставить scrollTop в самый низ:
+       если пользователь читает старые сообщения и прокрутил вверх,
+       его позиция должна сохраняться.
+       
+       Если пользователь уже находится внизу (или чат открывается впервые),
+       после обновления остаёмся внизу, чтобы новое сообщение было видно.
+    */
+    const wasInitialized = el.dataset.chatInitialized === "1";
+    const previousScrollTop = el.scrollTop;
+    const previousScrollHeight = el.scrollHeight;
+    const clientHeight = el.clientHeight;
+    const distanceFromBottom =
+        previousScrollHeight - previousScrollTop - clientHeight;
+    const wasNearBottom = !wasInitialized || distanceFromBottom <= 80;
+
     if (!Array.isArray(messages) || !messages.length) {
         el.innerHTML = '<div class="empty">Сообщений пока нет.</div>';
+        el.dataset.chatInitialized = "1";
         return;
     }
+
     el.innerHTML = messages.map(m => {
         const side = m.sender_side === "staff" ? "staff" : "client";
         const title = side === "staff" ? "СТО" : "Клиент";
         return '<div class="developer-chat-message '+side+'"><div class="developer-chat-message-meta">'+title+' · '+escapeHtml(formatDeveloperMessageDate(m.created_at))+'</div><div>'+escapeHtml(m.body || "")+'</div></div>';
     }).join("");
-    el.scrollTop = el.scrollHeight;
+
+    el.dataset.chatInitialized = "1";
+
+    if (wasNearBottom) {
+        el.scrollTop = el.scrollHeight;
+    } else {
+        /*
+           Пользователь читает историю выше.
+           Возвращаем его примерно к тому же месту, а не отправляем вниз.
+        */
+        const heightDifference = el.scrollHeight - previousScrollHeight;
+        el.scrollTop = Math.max(0, previousScrollTop + heightDifference);
+    }
 }
 
 async function refreshDeveloperMessagesBadge() {
