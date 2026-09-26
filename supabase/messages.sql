@@ -194,7 +194,22 @@ begin
                 'body', dm.body,
                 'is_read', dm.is_read,
                 'created_at', dm.created_at,
-                'edited_at', dm.edited_at
+                'edited_at', dm.edited_at,
+                'message_status',
+                case
+                    when dm.sender_side = 'client' then
+                        case
+                            when exists (
+                                select 1
+                                from public.developer_conversation_reads rr
+                                where rr.conversation_id = dm.conversation_id
+                                  and rr.user_id <> auth.uid()
+                                  and rr.last_read_at >= dm.created_at
+                            ) then 'read'
+                            else 'delivered'
+                        end
+                    else null
+                end
             )
             order by dm.created_at
         ),
@@ -402,7 +417,24 @@ as $$
         'body', dm.body,
         'is_read', dm.is_read,
         'created_at', dm.created_at,
-        'edited_at', dm.edited_at
+        'edited_at', dm.edited_at,
+        'message_status',
+        case
+            when dm.sender_side = 'staff' then
+                case
+                    when exists (
+                        select 1
+                        from public.developer_conversation_reads rr
+                        join public.developer_conversations cc
+                          on cc.id = rr.conversation_id
+                        where rr.conversation_id = dm.conversation_id
+                          and rr.user_id = cc.client_user_id
+                          and rr.last_read_at >= dm.created_at
+                    ) then 'read'
+                    else 'delivered'
+                end
+            else null
+        end
     )
     from public.developer_messages dm
     where public.is_staff()
@@ -519,8 +551,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public
-as $
-declare
+as $$declare
     message_row public.developer_messages;
 begin
     if auth.uid() is null then
@@ -561,7 +592,7 @@ begin
         'edited_at', message_row.edited_at
     );
 end;
-$;
+$$;
 
 revoke all on function public.developer_edit_message(uuid,text) from public;
 grant execute on function public.developer_edit_message(uuid,text) to authenticated;
