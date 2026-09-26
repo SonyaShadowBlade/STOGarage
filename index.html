@@ -861,7 +861,8 @@
     .sanechka-service-button { background:#2563eb; color:white; }
     .sanechka-rental-button { background:#0f766e; color:white; }
     .sanechka-update-button { width:100%; margin-top:4px; font-size:16px; font-weight:800; }
-    .sanechka-developer-button{display:flex;align-items:center;justify-content:center;gap:8px;line-height:1.2;text-align:center;box-sizing:border-box;background:#7c3aed;color:#fff}\n    .sanechka-developer-button.has-unread{background:#facc15 !important;color:#422006 !important;border-color:#eab308;box-shadow:0 0 0 3px rgba(250,204,21,.22)}
+    .sanechka-developer-button{display:flex;align-items:center;justify-content:center;gap:8px;line-height:1.2;text-align:center;box-sizing:border-box;background:#7c3aed;color:#fff;}
+    .sanechka-developer-button.has-unread{background:#facc15 !important;color:#422006 !important;border:2px solid #eab308 !important;box-shadow:0 0 0 3px rgba(250,204,21,.22);}
     .developer-client-messages-badge{min-width:20px;height:20px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:#dc2626;color:#fff;font-size:11px;font-weight:900}
     .developer-messages-button{display:inline-flex;align-items:center;gap:7px;position:relative;background:#374151;color:#fff;font-weight:800;border:1px solid rgba(255,255,255,.2)}
     .developer-messages-button.has-unread{background:#facc15;color:#422006;border-color:#eab308;box-shadow:0 0 0 3px rgba(250,204,21,.22)}
@@ -8723,25 +8724,26 @@ function updateDeveloperMessagesButton(unreadCount = 0) {
     button.classList.toggle("has-unread", unreadCount > 0);
 }
 
-function updateDeveloperClientMessagesButton(unread = false) {
+function updateDeveloperClientMessagesButton(unreadCount = 0) {
     const button = document.getElementById("developerClientMessagesButton");
     const badge = document.getElementById("developerClientMessagesBadge");
     if (!button) return;
 
+    const count = Math.max(0, Number(unreadCount) || 0);
     const show = isClientAccount();
     button.style.display = show ? "flex" : "none";
 
     if (badge) {
-        badge.textContent = unread ? "1" : "0";
-        badge.style.display = unread ? "inline-flex" : "none";
+        badge.textContent = String(count);
+        badge.style.display = count > 0 ? "inline-flex" : "none";
     }
 
-    button.classList.toggle("has-unread", !!unread);
+    button.classList.toggle("has-unread", count > 0);
 }
 
 async function refreshDeveloperClientMessagesBadge() {
     if (!isClientAccount()) {
-        updateDeveloperClientMessagesButton(false);
+        updateDeveloperClientMessagesButton(0);
         return;
     }
 
@@ -8751,7 +8753,7 @@ async function refreshDeveloperClientMessagesBadge() {
             body: JSON.stringify({})
         });
         const conversation = data && data.conversation;
-        updateDeveloperClientMessagesButton(!!(data && data.unread_for_client));
+        updateDeveloperClientMessagesButton(data && data.unread_for_client_count);
     } catch (error) {
         console.warn("Не удалось обновить уведомление клиента:", error);
     }
@@ -9005,7 +9007,7 @@ async function refreshDeveloperMessagesBadge() {
     try {
         const rows = await api("rpc/developer_get_staff_conversations",{method:"POST",body:JSON.stringify({})});
         const conversations = Array.isArray(rows) ? rows : [];
-        updateDeveloperMessagesButton(conversations.filter(x => x && x.conversation && x.conversation.unread_for_staff).length);
+        updateDeveloperMessagesButton(conversations.reduce((sum, x) => sum + (Number(x && x.conversation && x.conversation.unread_for_staff_count) || 0), 0));
     } catch (error) {
         console.warn("Не удалось обновить счётчик сообщений:", error);
     }
@@ -9037,10 +9039,10 @@ async function loadDeveloperClientConversation() {
         const conversation = data && data.conversation;
         const messages = data && Array.isArray(data.messages) ? data.messages : [];
         renderDeveloperChatMessages("developerClientChat",messages);
-        updateDeveloperClientMessagesButton(!!(data && data.unread_for_client));
+        updateDeveloperClientMessagesButton(data && data.unread_for_client_count);
         if (conversation && conversation.id) {
             await api("rpc/developer_mark_read",{method:"POST",body:JSON.stringify({p_conversation_id:conversation.id})});
-            updateDeveloperClientMessagesButton(false);
+            updateDeveloperClientMessagesButton(0);
         }
     } catch (error) {
         console.error("Ошибка загрузки сообщений клиента:",error);
@@ -9087,7 +9089,7 @@ async function loadDeveloperStaffConversations() {
     try {
         const data=await api("rpc/developer_get_staff_conversations",{method:"POST",body:JSON.stringify({})});
         developerMessagesConversations=Array.isArray(data)?data:[];
-        updateDeveloperMessagesButton(developerMessagesConversations.filter(x=>x&&x.conversation&&x.conversation.unread_for_staff).length);
+        updateDeveloperMessagesButton(developerMessagesConversations.reduce((sum,x)=>sum+(Number(x&&x.conversation&&x.conversation.unread_for_staff_count)||0),0));
         showDeveloperConversationList();
     } catch(error) {
         console.error("Ошибка загрузки обращений:",error);
@@ -9109,7 +9111,7 @@ function showDeveloperConversationList() {
     list.innerHTML=developerMessagesConversations.map(item=>{
         const c=item&&item.conversation?item.conversation:{};
         const m=item&&item.last_message?item.last_message:{};
-        const unread=!!c.unread_for_staff;
+        const unread=(Number(c.unread_for_staff_count)||0)>0;
         const id=String(c.id||"").replace(/'/g,"\\'");
         const title=c.client_name||c.client_email||"Клиент";
         const preview=m.body||"Без сообщений";
@@ -9128,7 +9130,7 @@ async function openDeveloperConversation(id) {
         const messages=await api("rpc/developer_get_conversation_messages",{method:"POST",body:JSON.stringify({p_conversation_id:id})});
         renderDeveloperChatMessages("developerStaffChat",Array.isArray(messages)?messages:[]);
         await api("rpc/developer_mark_read",{method:"POST",body:JSON.stringify({p_conversation_id:id})});
-        if(item&&item.conversation) item.conversation.unread_for_staff=false;
+        if(item&&item.conversation) item.conversation.unread_for_staff_count=0;
         updateDeveloperMessagesButton(developerMessagesConversations.filter(x=>x&&x.conversation&&x.conversation.unread_for_staff).length);
     } catch(error) {
         console.error("Ошибка открытия обращения:",error);
@@ -9189,9 +9191,10 @@ async function refreshDeveloperActiveConversation() {
             }
 
             updateDeveloperMessagesButton(
-                developerMessagesConversations.filter(
-                    x => x && x.conversation && x.conversation.unread_for_staff
-                ).length
+                developerMessagesConversations.reduce(
+                    (sum, x) => sum + (Number(x && x.conversation && x.conversation.unread_for_staff_count) || 0),
+                    0
+                )
             );
 
             return;
@@ -9220,7 +9223,7 @@ async function refreshDeveloperActiveConversation() {
                 });
             }
 
-            updateDeveloperClientMessagesButton(false);
+            updateDeveloperClientMessagesButton(0);
         }
     } catch (error) {
         console.warn("Не удалось обновить открытую переписку:", error);
