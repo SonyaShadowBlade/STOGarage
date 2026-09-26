@@ -198,21 +198,9 @@ begin
                 'message_status',
                 case
                     when dm.sender_side = 'client' then
-                        case
-                            when exists (
-                                select 1
-                                from public.developer_conversation_reads dcr
-                                join public.developer_conversations rc
-                                  on rc.id = dcr.conversation_id
-                                where dcr.conversation_id = dm.conversation_id
-                                  and dcr.last_read_at >= dm.created_at
-                                  and public.is_staff()
-                            ) then 'read'
-                            else 'delivered'
-                        end
+                        case when dm.is_read then 'read' else 'delivered' end
                     else null
                 end
-            )
             order by dm.created_at
         ),
         '[]'::jsonb
@@ -405,23 +393,9 @@ as $$
         'message_status',
         case
             when dm.sender_side = 'staff' then
-                case
-                    when exists (
-                        select 1
-                        from public.developer_conversation_reads dcr
-                        where dcr.conversation_id = dm.conversation_id
-                          and dcr.user_id = (
-                              select dc.client_user_id
-                              from public.developer_conversations dc
-                              where dc.id = dm.conversation_id
-                          )
-                          and dcr.last_read_at >= dm.created_at
-                    ) then 'read'
-                    else 'delivered'
-                end
+                case when dm.is_read then 'read' else 'delivered' end
             else null
         end
-    )
     from public.developer_messages dm
     where public.is_staff()
       and dm.conversation_id = p_conversation_id
@@ -540,11 +514,9 @@ $$;
 
 
 
--- ВАЖНО: developer_conversation_reads является источником истины
--- для статусов и непрочитанных сообщений.
--- Поле developer_messages.is_read сохраняется для совместимости со старыми
--- данными и для общего флага, но отображаемый статус сообщения определяется
--- индивидуальной отметкой прочтения конкретного получателя.
+-- Статусы ✓/✓✓ для текущей переписки определяются полем is_read.
+-- developer_conversation_reads сохраняется как индивидуальная отметка
+-- прочтения и используется для дополнительных данных о состоянии чтения.
 
 -- Редактирование собственных сообщений.
 -- Клиент может изменить только своё сообщение, сотрудник — только своё.
