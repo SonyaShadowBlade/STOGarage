@@ -167,6 +167,28 @@ begin
         raise exception 'Доступ разрешён только сотрудникам';
     end if;
 
+    -- Имя в сообщениях берём именно из карточки клиента СТО,
+    -- а не из имени профиля Auth. Поэтому, например, Санечка
+    -- отображается как «Санечка мебельщик», а не как роль/имя
+    -- из аккаунта Auth.
+    update public.developer_conversations dc
+    set client_name = coalesce(
+        (
+            select nullif(btrim(c.name), '')
+            from public.service_client_access a
+            join public.clients c on c.id = a.client_id
+            where a.user_id = dc.user_id
+            order by a.created_at asc
+            limit 1
+        ),
+        dc.client_name
+    )
+    where exists (
+        select 1
+        from public.service_client_access a
+        where a.user_id = dc.user_id
+    );
+
     select coalesce(
         jsonb_agg(
             jsonb_build_object(
