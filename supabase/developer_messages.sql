@@ -361,6 +361,7 @@ revoke all on function public.developer_get_staff_conversations() from public;
 revoke all on function public.developer_get_conversation_messages(uuid) from public;
 revoke all on function public.developer_staff_reply(uuid,text) from public;
 revoke all on function public.developer_mark_read(uuid) from public;
+revoke all on function public.developer_edit_message(uuid,text) from public;
 
 grant execute on function public.developer_is_staff() to authenticated;
 grant execute on function public.developer_send_message(text) to authenticated;
@@ -369,3 +370,4 @@ grant execute on function public.developer_get_staff_conversations() to authenti
 grant execute on function public.developer_get_conversation_messages(uuid) to authenticated;
 grant execute on function public.developer_staff_reply(uuid,text) to authenticated;
 grant execute on function public.developer_mark_read(uuid) to authenticated;
+grant execute on function public.developer_edit_message(uuid,text) to authenticated;
