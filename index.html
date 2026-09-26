@@ -9335,12 +9335,32 @@ async function refreshDeveloperActiveConversation() {
                сразу строится из уже актуального состояния чтения.
             */
             if (conversation && conversation.id) {
-                await api("rpc/developer_mark_read", {
-                    method: "POST",
-                    body: JSON.stringify({
-                        p_conversation_id: conversation.id
-                    })
-                });
+                try {
+                    const markReadResult = await api("rpc/developer_mark_read", {
+                        method: "POST",
+                        body: JSON.stringify({
+                            p_conversation_id: conversation.id
+                        })
+                    });
+
+                    console.log("[DEV CHAT DIAG] client mark_read OK:", markReadResult);
+                    showDeveloperMessagesStatus(
+                        "[Диагностика] mark_read OK: " + JSON.stringify(markReadResult)
+                    );
+                } catch (markReadError) {
+                    console.error("[DEV CHAT DIAG] client mark_read ERROR:", markReadError);
+                    showDeveloperMessagesStatus(
+                        "[Диагностика] mark_read ОШИБКА: " +
+                        String(markReadError && markReadError.message || markReadError),
+                        true
+                    );
+                }
+            } else {
+                console.warn("[DEV CHAT DIAG] client conversation.id отсутствует:", conversation, data);
+                showDeveloperMessagesStatus(
+                    "[Диагностика] conversation.id отсутствует. Ответ: " + JSON.stringify(data),
+                    true
+                );
             }
 
             const refreshed = conversation && conversation.id
