@@ -551,7 +551,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public
-as $
+as $$
 declare
     message_row public.developer_messages;
 begin
