@@ -8728,7 +8728,8 @@ function closeTopStoModalFromBack() {
     ["openClientModal", "clientModalBg"],
     ["openAddVehicleModal", "addVehicleModalBg"],
     ["openEditVehicleModal", "editVehicleModalBg"],
-    ["openVehicleModal", "vehicleModalBg"],
+    // Автомобиль открывается функцией openVehicle(), а не openVehicleModal().
+    ["openVehicle", "vehicleModalBg"],
     ["openServiceModal", "serviceModalBg"],
     ["openBackupModal", "backupBg"]
 ].forEach(([name, id]) => wrapStoModalOpener(name, id));
