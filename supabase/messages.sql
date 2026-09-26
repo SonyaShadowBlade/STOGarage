@@ -272,7 +272,7 @@ security definer
 set search_path = public
 as $$
 declare
-    conversation_id uuid;
+    v_conversation_id uuid;
     message_id uuid;
 begin
     if auth.uid() is null then
@@ -305,7 +305,7 @@ begin
         is_read
     )
     values (
-        conversation_id,
+        v_conversation_id,
         auth.uid(),
         'client',
         trim(p_body),
