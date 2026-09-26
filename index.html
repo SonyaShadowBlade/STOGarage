@@ -3893,6 +3893,22 @@ function openRentalEntryModal(){
     const bg=document.getElementById("rentalEntryModalBg");
     if(!bg)return;
     resetRentalTripEditor();
+
+    /* Для новой поездки сразу подставляем текущие дату и время. */
+    const now = new Date();
+    const localDate =
+        now.getFullYear() + "-" +
+        String(now.getMonth() + 1).padStart(2, "0") + "-" +
+        String(now.getDate()).padStart(2, "0");
+    const localTime =
+        String(now.getHours()).padStart(2, "0") + ":" +
+        String(now.getMinutes()).padStart(2, "0");
+
+    const tripDate = document.getElementById("rentalTripDate");
+    const tripTime = document.getElementById("rentalTripTime");
+    if (tripDate) tripDate.value = localDate;
+    if (tripTime) tripTime.value = localTime;
+
     bg.style.display="block";
     showRentalTab("trip");
 }
