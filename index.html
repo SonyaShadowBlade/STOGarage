@@ -9175,13 +9175,9 @@ async function openDeveloperConversation(id) {
         await api("rpc/developer_mark_read",{method:"POST",body:JSON.stringify({p_conversation_id:id})});
         const messages=await api("rpc/developer_get_conversation_messages",{method:"POST",body:JSON.stringify({p_conversation_id:id})});
         renderDeveloperChatMessages("developerStaffChat",Array.isArray(messages)?messages:[]);
-        if(item&&item.conversation) item.conversation.unread_for_staff_count=0;
-        updateDeveloperMessagesButton(
-            developerMessagesConversations.reduce(
-                (sum, x) => sum + (Number(x && x.conversation && x.conversation.unread_for_staff_count) || 0),
-                0
-            )
-        );
+        /* После прочтения заново получаем счётчик с сервера.
+           Не используем старое значение из developerMessagesConversations. */
+        await refreshDeveloperMessagesBadge();
     } catch(error) {
         console.error("Ошибка открытия обращения:",error);
         showDeveloperMessagesStatus("Не удалось открыть переписку: "+error.message,true);
@@ -9238,22 +9234,9 @@ async function refreshDeveloperActiveConversation() {
                 Array.isArray(refreshedMessages) ? refreshedMessages : []
             );
 
-            const item = developerMessagesConversations.find(
-                x => x && x.conversation &&
-                    String(x.conversation.id) === String(developerActiveConversationId)
-            );
-
-            if (item && item.conversation) {
-                item.conversation.unread_for_staff = false;
-                item.conversation.unread_for_staff_count = 0;
-            }
-
-            updateDeveloperMessagesButton(
-                developerMessagesConversations.reduce(
-                    (sum, x) => sum + (Number(x && x.conversation && x.conversation.unread_for_staff_count) || 0),
-                    0
-                )
-            );
+            /* Счётчик должен браться из свежих данных БД.
+               Локальный developerMessagesConversations может быть устаревшим. */
+            await refreshDeveloperMessagesBadge();
 
             return;
         }
