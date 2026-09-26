@@ -8782,29 +8782,45 @@ function renderDeveloperChatMessages(targetId, messages) {
 
     setupDeveloperChatScroll(el);
 
+    const safeMessages = Array.isArray(messages) ? messages : [];
+
+    /*
+       Критически важно: обновляем DOM только если переписка действительно
+       изменилась. Раньше проверка сообщений каждую секунду заново делала
+       innerHTML, из-за чего мобильный браузер мог сбрасывать прокрутку вниз.
+    */
+    const signature = safeMessages.map(m => [
+        m && m.id || "",
+        m && m.created_at || "",
+        m && m.body || "",
+        m && m.sender_side || ""
+    ].join("|")).join("||");
+
     const wasInitialized = el.dataset.chatInitialized === "1";
+
+    if (wasInitialized && el.dataset.chatSignature === signature) {
+        return;
+    }
+
     const previousScrollTop = el.scrollTop;
     const previousScrollHeight = el.scrollHeight;
     const distanceFromBottom =
         previousScrollHeight - previousScrollTop - el.clientHeight;
 
-    /*
-       Важно: запоминаем не только положение, но и факт, что пользователь
-       сам читает историю выше. Тогда обновление раз в секунду не сможет
-       перебить его прокрутку.
-    */
     const userScrolledUp = el.dataset.userScrolledUp === "1";
     const wasNearBottom =
         !wasInitialized ||
         (!userScrolledUp && distanceFromBottom <= 80);
 
-    if (!Array.isArray(messages) || !messages.length) {
+    if (!safeMessages.length) {
         el.innerHTML = '<div class="empty">Сообщений пока нет.</div>';
         el.dataset.chatInitialized = "1";
+        el.dataset.chatSignature = signature;
+        el.dataset.userScrolledUp = "0";
         return;
     }
 
-    el.innerHTML = messages.map(m => {
+    el.innerHTML = safeMessages.map(m => {
         const side = m.sender_side === "staff" ? "staff" : "client";
         const title = side === "staff" ? "СТО" : "Клиент";
         const messageId = String(m.id || "");
@@ -8827,28 +8843,28 @@ function renderDeveloperChatMessages(targetId, messages) {
     }).join("");
 
     el.dataset.chatInitialized = "1";
-
-    const restoreScroll = () => {
-        if (wasNearBottom) {
-            el.scrollTop = el.scrollHeight;
-            el.dataset.userScrolledUp = "0";
-        } else {
-            /*
-               Историю читают вверх — оставляем ровно ту же позицию.
-               Не используем scrollIntoView и не отправляем чат вниз.
-            */
-            el.scrollTop = previousScrollTop;
-            el.dataset.userScrolledUp = "1";
-        }
-    };
+    el.dataset.chatSignature = signature;
 
     /*
-       Некоторые мобильные браузеры корректируют scrollTop после innerHTML
-       ещё один кадр. Поэтому восстанавливаем позицию дважды.
+       Новое сообщение: если пользователь был внизу, остаёмся внизу.
+       Если он читал историю выше, сохраняем его позицию.
     */
+    if (wasNearBottom) {
+        el.scrollTop = el.scrollHeight;
+        el.dataset.userScrolledUp = "0";
+        return;
+    }
+
+    /*
+       При добавлении нового сообщения высота контейнера могла измениться.
+       Возвращаем прежнюю позицию пользователя, а не отправляем его вниз.
+    */
+    const heightDelta = el.scrollHeight - previousScrollHeight;
+    el.scrollTop = previousScrollTop + Math.max(0, heightDelta);
+
     requestAnimationFrame(() => {
-        restoreScroll();
-        requestAnimationFrame(restoreScroll);
+        el.scrollTop = previousScrollTop + Math.max(0, el.scrollHeight - previousScrollHeight);
+        el.dataset.userScrolledUp = "1";
     });
 }
 
