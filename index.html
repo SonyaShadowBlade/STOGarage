@@ -8855,7 +8855,7 @@ function showDeveloperConversationList() {
         const id=String(c.id||"").replace(/'/g,"\\'");
         const title=c.client_name||c.client_email||"Клиент";
         const preview=m.body||"Без сообщений";
-        return '<div class="developer-message-conversation '+(unread?"unread":"")+'" onclick="openDeveloperConversation(\''+id+'\')"><div class="developer-message-conversation-title">'+(unread?"🟡 ":"")+escapeHtml(title)+'</div><div class="developer-message-conversation-meta">'+escapeHtml(c.client_email||"")+'<br>'+escapeHtml(formatDeveloperMessageDate(m.created_at))+' · '+escapeHtml(preview.slice(0,180))+'</div></div>';
+        return '<div class="developer-message-conversation '+(unread?"unread":"")+'" onclick="openDeveloperConversation(\''+id+'\')"><div class="developer-message-conversation-title">'+(unread?"🟡 ":"")+escapeHtml(title)+'</div><div class="developer-message-conversation-meta">'+escapeHtml(formatDeveloperMessageDate(m.created_at))+' · '+escapeHtml(preview.slice(0,180))+'</div></div>';
     }).join("");
 }
 
@@ -8865,7 +8865,7 @@ async function openDeveloperConversation(id) {
     const c=item&&item.conversation?item.conversation:{};
     document.getElementById("developerConversationList").style.display="none";
     document.getElementById("developerStaffChatPanel").style.display="block";
-    document.getElementById("developerStaffChatTitle").textContent=(c.client_name||"Клиент")+(c.client_email?" · "+c.client_email:"");
+    document.getElementById("developerStaffChatTitle").textContent=c.client_name||"Клиент";
     try {
         const messages=await api("rpc/developer_get_conversation_messages",{method:"POST",body:JSON.stringify({p_conversation_id:id})});
         renderDeveloperChatMessages("developerStaffChat",Array.isArray(messages)?messages:[]);
