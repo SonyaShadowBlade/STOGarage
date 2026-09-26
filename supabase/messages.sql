@@ -232,13 +232,7 @@ begin
                 from public.developer_messages dm
                 where dm.conversation_id = (c->>'id')::uuid
                   and dm.sender_side = 'staff'
-                  and not exists (
-                      select 1
-                      from public.developer_conversation_reads dcr
-                      where dcr.conversation_id = dm.conversation_id
-                        and dcr.user_id = auth.uid()
-                        and dcr.last_read_at >= dm.created_at
-                  )
+                  and dm.is_read = false
             )
         end
     );
@@ -396,6 +390,7 @@ as $$
                 case when dm.is_read then 'read' else 'delivered' end
             else null
         end
+    )
     from public.developer_messages dm
     where public.is_staff()
       and dm.conversation_id = p_conversation_id
