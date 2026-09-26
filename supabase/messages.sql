@@ -551,7 +551,8 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public
-as $$declare
+as $
+declare
     message_row public.developer_messages;
 begin
     if auth.uid() is null then
