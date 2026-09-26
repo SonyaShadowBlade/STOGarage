@@ -8894,8 +8894,20 @@ async function sendDeveloperStaffReply() {
     }
 }
 
-setInterval(refreshDeveloperMessagesBadge,30000);
-setInterval(refreshDeveloperClientMessagesBadge,30000);
+/* Проверяем новые сообщения часто, а при возврате во вкладку — сразу. */
+setInterval(refreshDeveloperMessagesBadge,5000);
+setInterval(refreshDeveloperClientMessagesBadge,5000);
+
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") return;
+    refreshDeveloperMessagesBadge();
+    refreshDeveloperClientMessagesBadge();
+});
+
+window.addEventListener("focus", () => {
+    refreshDeveloperMessagesBadge();
+    refreshDeveloperClientMessagesBadge();
+});
 
 /* =====================================================
    МОБИЛЬНАЯ КНОПКА «НАЗАД»
