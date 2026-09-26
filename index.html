@@ -8548,6 +8548,166 @@ async function runStartup() {
     checkForProgramUpdate(isStaff);
 }
 
+/* =====================================================
+   МОБИЛЬНАЯ КНОПКА «НАЗАД»
+   Если открыто окно СТО — закрываем его вместо выхода
+   со страницы.
+===================================================== */
+
+const STO_MODAL_HISTORY_IDS = [
+    "changelogBg",
+    "sanechkaServiceModalBg",
+    "rentalModalBg",
+    "rentalEntryModalBg",
+    "clientModalBg",
+    "addVehicleModalBg",
+    "editVehicleModalBg",
+    "vehicleModalBg",
+    "serviceModalBg",
+    "backupBg"
+];
+
+let stoModalHistoryDepth = 0;
+let stoModalHistoryBusy = false;
+
+function getVisibleStoModals() {
+    return STO_MODAL_HISTORY_IDS
+        .map(id => document.getElementById(id))
+        .filter(el => el && getComputedStyle(el).display !== "none");
+}
+
+function stoPushModalHistory() {
+    if (stoModalHistoryBusy) return;
+
+    history.pushState(
+        { stoModal: true },
+        document.title,
+        window.location.href
+    );
+    stoModalHistoryDepth++;
+}
+
+function stoBackAfterClosing(count) {
+    if (stoModalHistoryBusy || count <= 0 || stoModalHistoryDepth <= 0) return;
+
+    const steps = Math.min(count, stoModalHistoryDepth);
+    stoModalHistoryDepth -= steps;
+
+    stoModalHistoryBusy = true;
+    history.go(-steps);
+
+    setTimeout(() => {
+        stoModalHistoryBusy = false;
+    }, 100);
+}
+
+function wrapStoModalOpener(functionName, modalId) {
+    const original = window[functionName];
+    if (typeof original !== "function") return;
+
+    window[functionName] = function(...args) {
+        const wasVisible = !!document.getElementById(modalId) &&
+            getComputedStyle(document.getElementById(modalId)).display !== "none";
+
+        const result = original.apply(this, args);
+
+        if (!wasVisible && !stoModalHistoryBusy) {
+            const modal = document.getElementById(modalId);
+            if (modal && getComputedStyle(modal).display !== "none") {
+                stoPushModalHistory();
+            }
+        }
+
+        return result;
+    };
+}
+
+function wrapStoModalCloser(functionName) {
+    const original = window[functionName];
+    if (typeof original !== "function") return;
+
+    window[functionName] = function(...args) {
+        const visibleBefore = getVisibleStoModals().length;
+
+        const result = original.apply(this, args);
+
+        const visibleAfter = getVisibleStoModals().length;
+        const closedCount = Math.max(0, visibleBefore - visibleAfter);
+
+        stoBackAfterClosing(closedCount);
+        return result;
+    };
+}
+
+function closeTopStoModalFromBack() {
+    const visible = getVisibleStoModals();
+
+    if (!visible.length) return false;
+
+    const top = visible[visible.length - 1];
+
+    const closeById = {
+        changelogBg: "closeChangelog",
+        sanechkaServiceModalBg: "closeSanechkaServiceModal",
+        rentalEntryModalBg: "closeRentalEntryModal",
+        rentalModalBg: "closeRentalModal",
+        clientModalBg: "closeClientModal",
+        addVehicleModalBg: "closeAddVehicleModal",
+        editVehicleModalBg: "closeEditVehicleModal",
+        vehicleModalBg: "closeVehicleModal",
+        serviceModalBg: "closeServiceModal",
+        backupBg: "closeBackupModal"
+    };
+
+    const closeName = closeById[top.id];
+
+    if (closeName && typeof window[closeName] === "function") {
+        stoModalHistoryBusy = true;
+        try {
+            window[closeName]();
+        } finally {
+            stoModalHistoryBusy = false;
+        }
+    } else {
+        top.style.display = "none";
+    }
+
+    return true;
+}
+
+[
+    ["openChangelog", "changelogBg"],
+    ["openSanechkaServiceModal", "sanechkaServiceModalBg"],
+    ["openRentalModal", "rentalModalBg"],
+    ["openRentalEntryModal", "rentalEntryModalBg"],
+    ["openClientModal", "clientModalBg"],
+    ["openAddVehicleModal", "addVehicleModalBg"],
+    ["openEditVehicleModal", "editVehicleModalBg"],
+    ["openVehicleModal", "vehicleModalBg"],
+    ["openServiceModal", "serviceModalBg"],
+    ["openBackupModal", "backupBg"]
+].forEach(([name, id]) => wrapStoModalOpener(name, id));
+
+[
+    "closeChangelog",
+    "closeSanechkaServiceModal",
+    "closeRentalEntryModal",
+    "closeRentalModal",
+    "closeClientModal",
+    "closeAddVehicleModal",
+    "closeEditVehicleModal",
+    "closeVehicleModal",
+    "closeServiceModal",
+    "closeBackupModal"
+].forEach(name => wrapStoModalCloser(name));
+
+window.addEventListener("popstate", () => {
+    if (stoModalHistoryDepth > 0) {
+        stoModalHistoryDepth--;
+        closeTopStoModalFromBack();
+    }
+});
+
 runStartup();
 </script>
 </body>
