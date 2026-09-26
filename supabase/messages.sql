@@ -192,13 +192,34 @@ begin
                 'id', dm.id,
                 'sender_side', dm.sender_side,
                 'body', dm.body,
-                'is_read', dm.is_read,
+                'is_read',
+                case
+                    when dm.sender_side = 'client' then
+                        exists (
+                            select 1 from public.developer_conversation_reads r
+                            where r.conversation_id = dm.conversation_id
+                              and r.user_id <> auth.uid()
+                              and r.last_read_at >= dm.created_at
+                        )
+                    else
+                        exists (
+                            select 1 from public.developer_conversation_reads r
+                            where r.conversation_id = dm.conversation_id
+                              and r.user_id = auth.uid()
+                              and r.last_read_at >= dm.created_at
+                        )
+                end,
                 'created_at', dm.created_at,
                 'edited_at', dm.edited_at,
                 'message_status',
                 case
                     when dm.sender_side = 'client' then
-                        case when dm.is_read then 'read' else 'delivered' end
+                        case when exists (
+                            select 1 from public.developer_conversation_reads r
+                            where r.conversation_id = dm.conversation_id
+                              and r.user_id <> auth.uid()
+                              and r.last_read_at >= dm.created_at
+                        ) then 'read' else 'delivered' end
                     else null
                 end
             )
@@ -231,9 +252,12 @@ begin
             else (
                 select count(*)::int
                 from public.developer_messages dm
+                left join public.developer_conversation_reads r
+                  on r.conversation_id = dm.conversation_id
+                 and r.user_id = auth.uid()
                 where dm.conversation_id = (c->>'id')::uuid
                   and dm.sender_side = 'staff'
-                  and dm.is_read = false
+                  and dm.created_at > coalesce(r.last_read_at, 'epoch'::timestamptz)
             )
         end
     );
@@ -337,17 +361,23 @@ as $$
                 exists (
                     select 1
                     from public.developer_messages um
+                    left join public.developer_conversation_reads r
+                      on r.conversation_id = um.conversation_id
+                     and r.user_id = auth.uid()
                     where um.conversation_id = c.id
                       and um.sender_side = 'client'
-                      and um.is_read = false
+                      and um.created_at > coalesce(r.last_read_at, 'epoch'::timestamptz)
                 ),
             'unread_for_staff_count',
                 (
                     select count(*)::int
                     from public.developer_messages um
+                    left join public.developer_conversation_reads r
+                      on r.conversation_id = um.conversation_id
+                     and r.user_id = auth.uid()
                     where um.conversation_id = c.id
                       and um.sender_side = 'client'
-                      and um.is_read = false
+                      and um.created_at > coalesce(r.last_read_at, 'epoch'::timestamptz)
                 ),
             'updated_at', c.updated_at
         ),
@@ -382,13 +412,39 @@ as $$
         'id', dm.id,
         'sender_side', dm.sender_side,
         'body', dm.body,
-        'is_read', dm.is_read,
+        'is_read',
+        case
+            when dm.sender_side = 'staff' then
+                exists (
+                    select 1
+                    from public.developer_conversation_reads r
+                    join public.developer_conversations c on c.id = dm.conversation_id
+                    where r.conversation_id = dm.conversation_id
+                      and r.user_id = c.client_user_id
+                      and r.last_read_at >= dm.created_at
+                )
+            else
+                exists (
+                    select 1
+                    from public.developer_conversation_reads r
+                    where r.conversation_id = dm.conversation_id
+                      and r.user_id = auth.uid()
+                      and r.last_read_at >= dm.created_at
+                )
+        end,
         'created_at', dm.created_at,
         'edited_at', dm.edited_at,
         'message_status',
         case
             when dm.sender_side = 'staff' then
-                case when dm.is_read then 'read' else 'delivered' end
+                case when exists (
+                    select 1
+                    from public.developer_conversation_reads r
+                    join public.developer_conversations c on c.id = dm.conversation_id
+                    where r.conversation_id = dm.conversation_id
+                      and r.user_id = c.client_user_id
+                      and r.last_read_at >= dm.created_at
+                ) then 'read' else 'delivered' end
             else null
         end
     )
@@ -435,21 +491,10 @@ begin
     on conflict (conversation_id, user_id)
     do update set last_read_at = excluded.last_read_at;
 
-    -- В этой переписке один клиент и сотрудники. Поэтому is_read
-    -- надёжно фиксирует факт прочтения сообщения его получателем.
-    if public.is_staff() then
-        update public.developer_messages
-        set is_read = true
-        where conversation_id = p_conversation_id
-          and sender_side = 'client'
-          and is_read = false;
-    else
-        update public.developer_messages
-        set is_read = true
-        where conversation_id = p_conversation_id
-          and sender_side = 'staff'
-          and is_read = false;
-    end if;
+    -- Состояние прочтения хранится отдельно для каждого пользователя
+    -- в developer_conversation_reads. Поле developer_messages.is_read
+    -- оставляем только для совместимости со старыми данными и больше
+    -- не используем как источник истины.
 end;
 $$;
 
@@ -510,9 +555,10 @@ $$;
 
 
 
--- Статусы ✓/✓✓ для текущей переписки определяются полем is_read.
--- developer_conversation_reads сохраняется как индивидуальная отметка
--- прочтения и используется для дополнительных данных о состоянии чтения.
+-- Статусы ✓/✓✓ и счётчики непрочитанных определяются через
+-- developer_conversation_reads.last_read_at. Это позволяет одному
+-- пользователю прочитать сообщение, не меняя состояние чтения для другого.
+-- Поле developer_messages.is_read сохранено для совместимости со старыми данными.
 
 -- Редактирование собственных сообщений.
 -- Клиент может изменить только своё сообщение, сотрудник — только своё.
