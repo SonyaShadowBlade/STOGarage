@@ -9322,17 +9322,16 @@ async function refreshDeveloperActiveConversation() {
         }
 
         if (isClientAccount()) {
+            const diagnosticRequestId = Date.now().toString(36);
             const diagnosticAuth = {
                 email: authSession && authSession.user && authSession.user.email || null,
                 user_id: authSession && authSession.user && authSession.user.id || null,
                 has_access_token: !!(authSession && authSession.access_token),
-                supabase_url: SUPABASE_URL
+                supabase_url: SUPABASE_URL,
+                page_url: location.href,
+                app_version: APP_VERSION,
+                time: new Date().toISOString()
             };
-
-            console.log("[DEV CHAT DIAG] auth before client RPC:", diagnosticAuth);
-            showDeveloperMessagesStatus(
-                "[Диагностика] auth: " + JSON.stringify(diagnosticAuth)
-            );
 
             let data;
             try {
@@ -9340,20 +9339,32 @@ async function refreshDeveloperActiveConversation() {
                     method: "POST",
                     body: JSON.stringify({})
                 });
-
-                console.log("[DEV CHAT DIAG] client RPC raw result:", data);
-                showDeveloperMessagesStatus(
-                    "[Диагностика] RPC result: " + JSON.stringify(data)
-                );
             } catch (rpcError) {
-                console.error("[DEV CHAT DIAG] client RPC ERROR:", rpcError);
+                const errorText = String(rpcError && rpcError.message || rpcError);
                 showDeveloperMessagesStatus(
-                    "[Диагностика] RPC ОШИБКА: " +
-                    String(rpcError && rpcError.message || rpcError),
+                    "[Диагностика " + diagnosticRequestId + "] " +
+                    JSON.stringify({auth: diagnosticAuth, rpc_error: errorText}),
                     true
                 );
                 throw rpcError;
             }
+
+            const diagnosticResult = {
+                auth: diagnosticAuth,
+                conversation: data && data.conversation || null,
+                message_count: data && Array.isArray(data.messages) ? data.messages.length : null,
+                unread_for_client: data && data.unread_for_client,
+                unread_for_client_count: data && data.unread_for_client_count,
+                first_message_id: data && Array.isArray(data.messages) && data.messages.length ? data.messages[0].id : null,
+                last_message_id: data && Array.isArray(data.messages) && data.messages.length ? data.messages[data.messages.length - 1].id : null
+            };
+
+            console.log("[DEV CHAT DIAG COMPLETE]", diagnosticResult);
+            showDeveloperMessagesStatus(
+                "[Диагностика " + diagnosticRequestId + "] " +
+                JSON.stringify(diagnosticResult),
+                false
+            );
 
             const conversation = data && data.conversation;
 
