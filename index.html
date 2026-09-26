@@ -9322,10 +9322,38 @@ async function refreshDeveloperActiveConversation() {
         }
 
         if (isClientAccount()) {
-            const data = await api("rpc/developer_get_my_conversation", {
-                method: "POST",
-                body: JSON.stringify({})
-            });
+            const diagnosticAuth = {
+                email: authSession && authSession.user && authSession.user.email || null,
+                user_id: authSession && authSession.user && authSession.user.id || null,
+                has_access_token: !!(authSession && authSession.access_token),
+                supabase_url: SUPABASE_URL
+            };
+
+            console.log("[DEV CHAT DIAG] auth before client RPC:", diagnosticAuth);
+            showDeveloperMessagesStatus(
+                "[Диагностика] auth: " + JSON.stringify(diagnosticAuth)
+            );
+
+            let data;
+            try {
+                data = await api("rpc/developer_get_my_conversation", {
+                    method: "POST",
+                    body: JSON.stringify({})
+                });
+
+                console.log("[DEV CHAT DIAG] client RPC raw result:", data);
+                showDeveloperMessagesStatus(
+                    "[Диагностика] RPC result: " + JSON.stringify(data)
+                );
+            } catch (rpcError) {
+                console.error("[DEV CHAT DIAG] client RPC ERROR:", rpcError);
+                showDeveloperMessagesStatus(
+                    "[Диагностика] RPC ОШИБКА: " +
+                    String(rpcError && rpcError.message || rpcError),
+                    true
+                );
+                throw rpcError;
+            }
 
             const conversation = data && data.conversation;
 
@@ -9362,6 +9390,10 @@ async function refreshDeveloperActiveConversation() {
                     true
                 );
             }
+
+            console.log("[DEV CHAT DIAG] client conversation:", conversation);
+            console.log("[DEV CHAT DIAG] client message count:", data && Array.isArray(data.messages) ? data.messages.length : null);
+            console.log("[DEV CHAT DIAG] client unread count:", data && data.unread_for_client_count);
 
             const refreshed = conversation && conversation.id
                 ? await api("rpc/developer_get_my_conversation", {
