@@ -1027,7 +1027,7 @@
             <div id="sanechkaServiceStatus" class="status" style="display:none;"></div>
             <div id="sanechkaServiceVehicles">Загружаем автомобили...</div>
             <div id="sanechkaServiceHistory" class="sanechka-service-history" style="display:none;">
-                <button class="btn-secondary sanechka-service-back" onclick="showSanechkaServiceVehicles()">← К автомобилям</button>
+                <button class="btn-secondary sanechka-service-back" onclick="goBackSanechkaServiceVehicles()">← К автомобилям</button>
                 <div id="sanechkaServiceHistoryTitle" style="font-size:20px;font-weight:900;margin-bottom:10px;"></div>
                 <div id="sanechkaServiceHistoryList"></div>
             </div>
@@ -3401,13 +3401,37 @@ function renderSanechkaServiceVehicles(){
         return "<div class=\"sanechka-service-vehicle\" onclick=\"openSanechkaServiceHistory('" + id + "')\"><div class=\"sanechka-service-vehicle-title\">🚗 " + escapeHtml(title) + "</div><div class=\"sanechka-service-vehicle-meta\">" + (meta.join(" · ") || "Нажмите, чтобы открыть историю обслуживания") + "</div></div>";
     }).join("");
 }
+let sanechkaServiceHistoryActive = false;
+let sanechkaServiceHistoryPopHandling = false;
+
 function showSanechkaServiceVehicles(){
     document.getElementById("sanechkaServiceVehicles").style.display="block";
     document.getElementById("sanechkaServiceHistory").style.display="none";
     showSanechkaServiceStatus("");
 }
+
+function goBackSanechkaServiceVehicles(){
+    if (sanechkaServiceHistoryActive) {
+        history.back();
+        return;
+    }
+    showSanechkaServiceVehicles();
+}
 async function openSanechkaServiceHistory(vehicleId){
     const vehicle=sanechkaServiceVehicles.find(v=>String(v.id)===String(vehicleId));if(!vehicle)return;
+
+    if (!sanechkaServiceHistoryActive && !sanechkaServiceHistoryPopHandling) {
+        history.pushState(
+            {
+                ...(history.state || {}),
+                stoServiceHistory: true
+            },
+            "",
+            window.location.href
+        );
+        sanechkaServiceHistoryActive = true;
+    }
+
     document.getElementById("sanechkaServiceVehicles").style.display="none";
     document.getElementById("sanechkaServiceHistory").style.display="block";
     const title=document.getElementById("sanechkaServiceHistoryTitle"),list=document.getElementById("sanechkaServiceHistoryList");
@@ -3465,7 +3489,11 @@ async function openSanechkaServiceHistory(vehicleId){
         list.innerHTML=services.map(s=>renderService(s,ib[s.id]||[],pb[s.id]||[])).join("");
     }catch(error){console.error(error);list.innerHTML='<div class="status error">Не удалось загрузить историю: '+escapeHtml(error.message)+'</div>';}
 }
-function closeSanechkaServiceModal(){const bg=document.getElementById("sanechkaServiceModalBg");if(bg)bg.style.display="none";}
+function closeSanechkaServiceModal(){
+    const bg=document.getElementById("sanechkaServiceModalBg");
+    if(bg)bg.style.display="none";
+    sanechkaServiceHistoryActive = false;
+}
 
 /* =====================================================
    АРЕНДА
@@ -8797,6 +8825,21 @@ function initStoModalHistory() {
     });
 
     window.addEventListener("popstate", () => {
+        if (sanechkaServiceHistoryActive) {
+            sanechkaServiceHistoryActive = false;
+            sanechkaServiceHistoryPopHandling = true;
+
+            try {
+                showSanechkaServiceVehicles();
+            } finally {
+                setTimeout(() => {
+                    sanechkaServiceHistoryPopHandling = false;
+                }, 150);
+            }
+
+            return;
+        }
+
         if (stoModalHistoryProgrammaticBack) {
             stoModalHistoryProgrammaticBack = false;
             return;
