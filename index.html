@@ -3562,10 +3562,6 @@ async function renderRentalDashboard(){
     const liters=fuels.reduce((s,r)=>s+Number(r.liters||0),0);
     const cost=fuels.reduce((s,r)=>s+Number(r.cost||0),0);
 
-    document.getElementById("rentalCurrentMileage").textContent=v.current_mileage!=null?Number(v.current_mileage).toLocaleString("ru-RU")+" км":"—";
-    document.getElementById("rentalTotalKm").textContent=km.toLocaleString("ru-RU")+" км";
-    document.getElementById("rentalFuelTotal").textContent=liters.toLocaleString("ru-RU",{maximumFractionDigits:2})+" л";
-    document.getElementById("rentalExpenseTotal").textContent=cost.toLocaleString("ru-RU",{maximumFractionDigits:2});
 
     document.getElementById("rentalHistory").innerHTML=rs.length?[...rs].sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))).map(r=>{
         if(r.type==="trip"){
