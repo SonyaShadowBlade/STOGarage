@@ -8885,12 +8885,13 @@ function renderDeveloperChatMessages(targetId, messages) {
        Пользователь был выше. Сохраняем именно расстояние до нижнего
        края, чтобы новые сообщения снизу не сдвигали историю из-под пальца.
     */
-    const newScrollTop = Math.max(
-        0,
-        el.scrollHeight - el.clientHeight - previousDistanceFromBottom
-    );
-
-    restoreDeveloperChatScroll(el, newScrollTop);
+    /*
+       Пользователь листает историю вверх.
+       Не сохраняем расстояние до низа: при приходе новых сообщений
+       оно изменится и чат начнёт сам двигаться вниз.
+       Сохраняем именно текущую позицию scrollTop.
+    */
+    restoreDeveloperChatScroll(el, previousScrollTop);
     el.dataset.userScrolledUp = "1";
 }
 
