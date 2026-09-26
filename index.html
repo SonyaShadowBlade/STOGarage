@@ -872,6 +872,14 @@
     .developer-message-conversation-title{font-weight:900;font-size:16px}
     .developer-message-conversation-meta{color:#64748b;font-size:12px;margin-top:4px;line-height:1.45}
     .developer-chat-list{max-height:420px;overflow-y:auto;padding-right:3px;margin-top:10px}
+    .developer-client-message-panel{display:flex;flex-direction:column;gap:10px}
+    .developer-client-message-panel .developer-chat-list{order:1;flex:0 0 auto;margin-top:0}
+    .developer-client-message-panel .developer-message-composer{order:2}
+    .developer-client-message-panel .developer-message-actions{order:3}
+    @media(max-width:700px){
+        .developer-client-message-panel .developer-chat-list{max-height:50vh;min-height:120px}
+        .developer-client-message-panel .developer-message-composer textarea{min-height:72px}
+    }
     .developer-chat-message{max-width:88%;padding:10px 12px;border-radius:12px;margin-top:9px;line-height:1.45;white-space:pre-wrap}
     .developer-chat-message.client{background:#f3f4f6;margin-right:auto}
     .developer-chat-message.staff{background:#dbeafe;margin-left:auto}
@@ -1041,10 +1049,10 @@
                 <button class="btn-secondary" onclick="closeDeveloperMessages()">✕</button>
             </div>
             <div id="developerMessagesStatus" class="status" style="display:none;"></div>
-            <div id="developerClientMessagePanel" style="display:none;">
-                <div class="field"><label>Ваше сообщение</label><textarea id="developerClientMessageText" maxlength="5000" placeholder="Опишите ошибку, предложение или вопрос..."></textarea></div>
-                <div class="form-buttons"><button class="btn-primary" onclick="sendDeveloperClientMessage()">📨 Отправить разработчику</button></div>
+            <div id="developerClientMessagePanel" class="developer-client-message-panel" style="display:none;">
                 <div id="developerClientChat" class="developer-chat-list"></div>
+                <div class="field developer-message-composer" style="margin-bottom:0;"><label>Ваше сообщение</label><textarea id="developerClientMessageText" maxlength="5000" placeholder="Опишите ошибку, предложение или вопрос..."></textarea></div>
+                <div class="form-buttons developer-message-actions" style="margin-top:0;"><button class="btn-primary" onclick="sendDeveloperClientMessage()">📨 Отправить разработчику</button></div>
             </div>
             <div id="developerStaffPanel" style="display:none;">
                 <div id="developerConversationList"></div>
