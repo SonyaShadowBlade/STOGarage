@@ -914,6 +914,11 @@
     .sanechka-service-vehicle-title { font-size:17px; font-weight:900; }
     .sanechka-service-vehicle-meta { margin-top:5px; color:#64748b; font-size:13px; line-height:1.5; }
     .sanechka-service-history .service-card { margin-top:10px; }
+
+
+    .rental-locked-field { display:flex; align-items:flex-end; gap:8px; }
+    .rental-locked-field .rental-locked-control { flex:1 1 auto; min-width:0; }
+    .rental-field-edit { flex:0 0 auto; white-space:nowrap; }
     .sanechka-service-back { margin-bottom:14px; }
     @media(max-width:700px) { .sanechka-main-button { min-height:105px; font-size:24px; } }
 
@@ -3987,11 +3992,57 @@ async function deleteRentalTrip(id){
     }catch(error){console.error(error);alert("Не удалось удалить поездку:\n\n"+error.message);}
 }
 
+function lockRentalTripField(inputId) {
+    const input=document.getElementById(inputId);
+    if(!input)return;
+    const field=input.closest(".field");
+    if(!field)return;
+    field.classList.add("rental-locked-field");
+    input.classList.add("rental-locked-control");
+    if(input.tagName==="SELECT") input.disabled=true;
+    else input.readOnly=true;
+    if(!field.querySelector(".rental-field-edit")){
+        const b=document.createElement("button");
+        b.type="button";
+        b.className="btn-secondary rental-field-edit";
+        b.textContent="✏️ Изменить";
+        b.onclick=()=>unlockRentalTripField(inputId);
+        field.appendChild(b);
+    }
+}
+function unlockRentalTripField(inputId) {
+    const input=document.getElementById(inputId);
+    if(!input)return;
+    const field=input.closest(".field");
+    if(!field)return;
+    if(input.tagName==="SELECT") input.disabled=false;
+    else input.readOnly=false;
+    const b=field.querySelector(".rental-field-edit");
+    if(b)b.remove();
+    field.classList.remove("rental-locked-field");
+    input.classList.remove("rental-locked-control");
+    input.focus();
+}
+function clearRentalTripFieldLocks() {
+    ["rentalTripDriver","rentalTripDate","rentalTripTime","rentalTripStart"].forEach(inputId=>{
+        const input=document.getElementById(inputId);
+        if(!input)return;
+        const field=input.closest(".field");
+        if(!field)return;
+        if(input.tagName==="SELECT") input.disabled=false;
+        else input.readOnly=false;
+        const b=field.querySelector(".rental-field-edit");
+        if(b)b.remove();
+        field.classList.remove("rental-locked-field");
+        input.classList.remove("rental-locked-control");
+    });
+}
 async function openRentalTripEditor(id){
     const r=rentalDashboardRecords.find(x=>x.type==="trip"&&String(x.id)===String(id));
     if(!r){alert("Поездка не найдена.");return;}
+    clearRentalTripFieldLocks();
     rentalEditingTripId=String(r.id);
-    document.getElementById("rentalTripModalTitle").textContent="✏️ Редактирование поездки";
+    document.getElementById("rentalTripModalTitle").textContent=r.status==="active"?"🛣 Активная поездка":"✏️ Редактирование поездки";
     document.getElementById("rentalTripSaveButton").textContent="💾 Сохранить изменения";
     document.getElementById("rentalTripDeleteButton").style.display="inline-block";
     document.getElementById("rentalTripDriver").value=r.driver||"Александр";
@@ -4000,10 +4051,15 @@ async function openRentalTripEditor(id){
     document.getElementById("rentalTripStart").value=r.startMileage??"";
     document.getElementById("rentalTripEnd").value=r.endMileage??"";
     document.getElementById("rentalTripNote").value=r.note||"";
-    const bg=document.getElementById("rentalEntryModalBg"); if(bg)bg.style.display="block";
+    const bg=document.getElementById("rentalEntryModalBg");
+    if(bg)bg.style.display="block";
     showRentalTab("trip");
+    if(r.status==="active"){
+        ["rentalTripDriver","rentalTripDate","rentalTripTime","rentalTripStart"].forEach(lockRentalTripField);
+    }
 }
 function resetRentalTripEditor(){
+    clearRentalTripFieldLocks();
     rentalEditingTripId=null;
     const t=document.getElementById("rentalTripModalTitle"),s=document.getElementById("rentalTripSaveButton"),d=document.getElementById("rentalTripDeleteButton");
     if(t)t.textContent="🛣 Новая поездка";
