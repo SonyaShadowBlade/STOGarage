@@ -3305,20 +3305,30 @@ async function saveCloudRentalRecord(vehicleId, record) {
     };
 
     if (record.type === "trip") {
-        await api("rental_trips", {
-            method: "POST",
-            headers: { "Prefer": "return=minimal" },
-            body: JSON.stringify({
-                ...base,
-                driver: record.driver || null,
-                trip_date: record.date || new Date().toISOString().slice(0, 10),
-                start_mileage: record.startMileage,
-                end_mileage: record.endMileage == null ? null : record.endMileage,
-                trip_time: record.time || null,
-                status: record.status || (record.endMileage == null ? "active" : "completed"),
-                route_note: record.note || null
-            })
-        });
+        const payload = {
+            ...base,
+            driver: record.driver || null,
+            trip_date: record.date || new Date().toISOString().slice(0, 10),
+            start_mileage: record.startMileage,
+            end_mileage: record.endMileage == null ? null : record.endMileage,
+            trip_time: record.time || null,
+            status: record.status || (record.endMileage == null ? "active" : "completed"),
+            route_note: record.note || null
+        };
+
+        if (record.id) {
+            await api("rental_trips?id=eq." + encodeURIComponent(record.id), {
+                method: "PATCH",
+                headers: { "Prefer": "return=minimal" },
+                body: JSON.stringify(payload)
+            });
+        } else {
+            await api("rental_trips", {
+                method: "POST",
+                headers: { "Prefer": "return=minimal" },
+                body: JSON.stringify(payload)
+            });
+        }
         return;
     }
 
