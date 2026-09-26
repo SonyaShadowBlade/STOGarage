@@ -861,6 +861,20 @@
     .sanechka-service-button { background:#2563eb; color:white; }
     .sanechka-rental-button { background:#0f766e; color:white; }
     .sanechka-update-button { width:100%; margin-top:4px; font-size:16px; font-weight:800; }
+    .developer-messages-button{display:inline-flex;align-items:center;gap:7px;position:relative;background:#374151;color:#fff;font-weight:800;border:1px solid rgba(255,255,255,.2)}
+    .developer-messages-button.has-unread{background:#facc15;color:#422006;border-color:#eab308;box-shadow:0 0 0 3px rgba(250,204,21,.22)}
+    .developer-messages-badge{min-width:20px;height:20px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:#dc2626;color:#fff;font-size:11px;font-weight:900}
+    .sanechka-developer-button{background:#7c3aed;color:#fff}
+    .developer-message-conversation{border:1px solid #e5e7eb;border-radius:12px;padding:13px;margin-top:10px;background:#fff;cursor:pointer}
+    .developer-message-conversation.unread{background:#fffbeb;border-color:#facc15}
+    .developer-message-conversation-title{font-weight:900;font-size:16px}
+    .developer-message-conversation-meta{color:#64748b;font-size:12px;margin-top:4px;line-height:1.45}
+    .developer-chat-list{max-height:420px;overflow-y:auto;padding-right:3px;margin-top:10px}
+    .developer-chat-message{max-width:88%;padding:10px 12px;border-radius:12px;margin-top:9px;line-height:1.45;white-space:pre-wrap}
+    .developer-chat-message.client{background:#f3f4f6;margin-right:auto}
+    .developer-chat-message.staff{background:#dbeafe;margin-left:auto}
+    .developer-chat-message-meta{font-size:11px;color:#64748b;margin-bottom:3px}
+
     .sanechka-readonly-note { margin-top:16px; padding:12px 14px; border-radius:12px; background:#f8fafc; color:#64748b; font-size:13px; line-height:1.5; text-align:center; }
     .sanechka-service-vehicle { border:1px solid #e5e7eb; border-radius:12px; padding:14px; margin-top:10px; background:#fff; cursor:pointer; }
     .sanechka-service-vehicle:hover { background:#f8fafc; }
@@ -956,9 +970,8 @@
 <header style="display:flex;align-items:center;gap:12px;">
     <span>🚗 СТО — сервисная база</span>
     <span id="userGreeting" class="user-greeting"></span>
-    <button id="logoutButton" class="btn-secondary auth-logout" onclick="logout()" style="display:none;">
-        🚪 Выйти
-    </button>
+    <button id="developerMessagesButton" class="developer-messages-button" onclick="openDeveloperMessages()" style="display:none;">💬 Сообщения <span id="developerMessagesBadge" class="developer-messages-badge" style="display:none;">0</span></button>
+    <button id="logoutButton" class="btn-secondary auth-logout" onclick="logout()" style="display:none;">🚪 Выйти</button>
 </header>
 
 <div class="container" style="display:none;">
@@ -1014,9 +1027,35 @@
         <button class="btn-secondary sanechka-update-button" onclick="checkVersionNow()">ℹ️ Проверить версию</button>
         <button class="sanechka-main-button sanechka-service-button" onclick="openSanechkaServiceModal()">🔧 Обслуживание</button>
         <button class="sanechka-main-button sanechka-rental-button" onclick="openRentalModal()">🚚 Аренда</button>
+        <button class="sanechka-main-button sanechka-developer-button" onclick="openDeveloperMessages()">💬 Написать разработчику</button>
     </div>
     <div class="sanechka-readonly-note">«Обслуживание» — только просмотр. Редактирование и удаление недоступны.</div>
 </div>
+
+    <div id="developerMessagesModalBg" class="modal-bg">
+        <div class="modal" style="max-width:900px;">
+            <div class="modal-header">
+                <div><h2>💬 Сообщения</h2><div id="developerMessagesSubtitle" style="color:#64748b;font-size:13px;"></div></div>
+                <button class="btn-secondary" onclick="closeDeveloperMessages()">✕</button>
+            </div>
+            <div id="developerMessagesStatus" class="status" style="display:none;"></div>
+            <div id="developerClientMessagePanel" style="display:none;">
+                <div class="field"><label>Ваше сообщение</label><textarea id="developerClientMessageText" maxlength="5000" placeholder="Опишите ошибку, предложение или вопрос..."></textarea></div>
+                <div class="form-buttons"><button class="btn-primary" onclick="sendDeveloperClientMessage()">📨 Отправить разработчику</button></div>
+                <div id="developerClientChat" class="developer-chat-list"></div>
+            </div>
+            <div id="developerStaffPanel" style="display:none;">
+                <div id="developerConversationList"></div>
+                <div id="developerStaffChatPanel" style="display:none;">
+                    <button class="btn-secondary" onclick="showDeveloperConversationList()">← К обращениям</button>
+                    <div id="developerStaffChatTitle" style="font-size:19px;font-weight:900;margin-top:12px;"></div>
+                    <div id="developerStaffChat" class="developer-chat-list"></div>
+                    <div class="field" style="margin-top:12px;"><label>Ответ клиенту</label><textarea id="developerStaffReplyText" maxlength="5000" placeholder="Напишите ответ..."></textarea></div>
+                    <button class="btn-success" onclick="sendDeveloperStaffReply()">📨 Ответить</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div id="sanechkaServiceModalBg" class="modal-bg">
         <div class="modal" style="max-width:900px;">
@@ -3137,11 +3176,17 @@ function applyUserInterfaceMode() {
         "sanechkaServiceModalBg"
     ];
 
+    updateDeveloperMessagesButton(0);
+
     if (sanechka) {
         extraWindows.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = "none";
         });
+    }
+
+    if (isStaffAccount()) {
+        refreshDeveloperMessagesBadge();
     }
 }
 
@@ -8622,6 +8667,198 @@ async function runStartup() {
 }
 
 /* =====================================================
+   СИСТЕМА СООБЩЕНИЙ КЛИЕНТ ↔ РАЗРАБОТЧИК
+===================================================== */
+
+let developerMessagesConversations = [];
+let developerActiveConversationId = null;
+
+function isStaffAccount() {
+    const role = String(sanechkaRentalProfile && sanechkaRentalProfile.role || "").trim().toLowerCase();
+    return role === "admin" || role === "father";
+}
+
+function isClientAccount() {
+    const role = String(sanechkaRentalProfile && sanechkaRentalProfile.role || "").trim().toLowerCase();
+    return role === "renter" || role === "rental" || isSanechkaAccount();
+}
+
+function updateDeveloperMessagesButton(unreadCount = 0) {
+    const button = document.getElementById("developerMessagesButton");
+    const badge = document.getElementById("developerMessagesBadge");
+    if (!button) return;
+    const show = isStaffAccount();
+    button.style.display = show ? "inline-flex" : "none";
+    if (badge) {
+        badge.textContent = String(unreadCount || 0);
+        badge.style.display = unreadCount > 0 ? "inline-flex" : "none";
+    }
+    button.classList.toggle("has-unread", unreadCount > 0);
+}
+
+function showDeveloperMessagesStatus(message, error = false) {
+    const el = document.getElementById("developerMessagesStatus");
+    if (!el) return;
+    el.style.display = message ? "block" : "none";
+    el.textContent = message || "";
+    el.classList.toggle("error", !!error);
+}
+
+function formatDeveloperMessageDate(value) {
+    if (!value) return "";
+    try {
+        return new Date(value).toLocaleString("ru-RU", {day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+    } catch (error) { return String(value); }
+}
+
+function renderDeveloperChatMessages(targetId, messages) {
+    const el = document.getElementById(targetId);
+    if (!el) return;
+    if (!Array.isArray(messages) || !messages.length) {
+        el.innerHTML = '<div class="empty">Сообщений пока нет.</div>';
+        return;
+    }
+    el.innerHTML = messages.map(m => {
+        const side = m.sender_side === "staff" ? "staff" : "client";
+        const title = side === "staff" ? "СТО" : "Клиент";
+        return '<div class="developer-chat-message '+side+'"><div class="developer-chat-message-meta">'+title+' · '+escapeHtml(formatDeveloperMessageDate(m.created_at))+'</div><div>'+escapeHtml(m.body || "")+'</div></div>';
+    }).join("");
+    el.scrollTop = el.scrollHeight;
+}
+
+async function refreshDeveloperMessagesBadge() {
+    if (!isStaffAccount()) { updateDeveloperMessagesButton(0); return; }
+    try {
+        const rows = await api("rpc/developer_get_staff_conversations",{method:"POST",body:JSON.stringify({})});
+        const conversations = Array.isArray(rows) ? rows : [];
+        updateDeveloperMessagesButton(conversations.filter(x => x && x.conversation && x.conversation.unread_for_staff).length);
+    } catch (error) {
+        console.warn("Не удалось обновить счётчик сообщений:", error);
+    }
+}
+
+async function openDeveloperMessages() {
+    const bg = document.getElementById("developerMessagesModalBg");
+    if (!bg) return;
+    bg.style.display = "block";
+    showDeveloperMessagesStatus("");
+    const staff = isStaffAccount();
+    document.getElementById("developerClientMessagePanel").style.display = staff ? "none" : "block";
+    document.getElementById("developerStaffPanel").style.display = staff ? "block" : "none";
+    document.getElementById("developerMessagesSubtitle").textContent = staff ? "Обращения клиентов" : "Здесь можно написать разработчику.";
+    if (staff) await loadDeveloperStaffConversations();
+    else await loadDeveloperClientConversation();
+}
+
+function closeDeveloperMessages() {
+    const bg = document.getElementById("developerMessagesModalBg");
+    if (bg) bg.style.display = "none";
+    developerActiveConversationId = null;
+    showDeveloperMessagesStatus("");
+}
+
+async function loadDeveloperClientConversation() {
+    try {
+        const data = await api("rpc/developer_get_my_conversation",{method:"POST",body:JSON.stringify({})});
+        const conversation = data && data.conversation;
+        const messages = data && Array.isArray(data.messages) ? data.messages : [];
+        renderDeveloperChatMessages("developerClientChat",messages);
+        if (conversation && conversation.id) {
+            await api("rpc/developer_mark_read",{method:"POST",body:JSON.stringify({p_conversation_id:conversation.id})});
+        }
+    } catch (error) {
+        console.error("Ошибка загрузки сообщений клиента:",error);
+        showDeveloperMessagesStatus("Не удалось загрузить сообщения: "+error.message,true);
+    }
+}
+
+async function sendDeveloperClientMessage() {
+    const input=document.getElementById("developerClientMessageText");
+    const body=input ? input.value.trim() : "";
+    if (!body) { showDeveloperMessagesStatus("Напишите сообщение.",true); return; }
+    try {
+        await api("rpc/developer_send_message",{method:"POST",body:JSON.stringify({p_body:body})});
+        input.value="";
+        await loadDeveloperClientConversation();
+        showDeveloperMessagesStatus("Сообщение отправлено.");
+    } catch(error) {
+        console.error("Ошибка отправки сообщения:",error);
+        showDeveloperMessagesStatus("Не удалось отправить сообщение: "+error.message,true);
+    }
+}
+
+async function loadDeveloperStaffConversations() {
+    try {
+        const data=await api("rpc/developer_get_staff_conversations",{method:"POST",body:JSON.stringify({})});
+        developerMessagesConversations=Array.isArray(data)?data:[];
+        updateDeveloperMessagesButton(developerMessagesConversations.filter(x=>x&&x.conversation&&x.conversation.unread_for_staff).length);
+        showDeveloperConversationList();
+    } catch(error) {
+        console.error("Ошибка загрузки обращений:",error);
+        showDeveloperMessagesStatus("Не удалось загрузить обращения: "+error.message,true);
+    }
+}
+
+function showDeveloperConversationList() {
+    developerActiveConversationId=null;
+    const list=document.getElementById("developerConversationList");
+    const panel=document.getElementById("developerStaffChatPanel");
+    if(list) list.style.display="block";
+    if(panel) panel.style.display="none";
+    if(!list) return;
+    if(!developerMessagesConversations.length) {
+        list.innerHTML='<div class="empty">Клиенты пока ничего не написали.</div>';
+        return;
+    }
+    list.innerHTML=developerMessagesConversations.map(item=>{
+        const c=item&&item.conversation?item.conversation:{};
+        const m=item&&item.last_message?item.last_message:{};
+        const unread=!!c.unread_for_staff;
+        const id=String(c.id||"").replace(/'/g,"\\'");
+        const title=c.client_name||c.client_email||"Клиент";
+        const preview=m.body||"Без сообщений";
+        return '<div class="developer-message-conversation '+(unread?"unread":"")+'" onclick="openDeveloperConversation(\''+id+'\')"><div class="developer-message-conversation-title">'+(unread?"🟡 ":"")+escapeHtml(title)+'</div><div class="developer-message-conversation-meta">'+escapeHtml(c.client_email||"")+'<br>'+escapeHtml(formatDeveloperMessageDate(m.created_at))+' · '+escapeHtml(preview.slice(0,180))+'</div></div>';
+    }).join("");
+}
+
+async function openDeveloperConversation(id) {
+    developerActiveConversationId=id;
+    const item=developerMessagesConversations.find(x=>x&&x.conversation&&String(x.conversation.id)===String(id));
+    const c=item&&item.conversation?item.conversation:{};
+    document.getElementById("developerConversationList").style.display="none";
+    document.getElementById("developerStaffChatPanel").style.display="block";
+    document.getElementById("developerStaffChatTitle").textContent=(c.client_name||"Клиент")+(c.client_email?" · "+c.client_email:"");
+    try {
+        const messages=await api("rpc/developer_get_conversation_messages",{method:"POST",body:JSON.stringify({p_conversation_id:id})});
+        renderDeveloperChatMessages("developerStaffChat",Array.isArray(messages)?messages:[]);
+        await api("rpc/developer_mark_read",{method:"POST",body:JSON.stringify({p_conversation_id:id})});
+        if(item&&item.conversation) item.conversation.unread_for_staff=false;
+        updateDeveloperMessagesButton(developerMessagesConversations.filter(x=>x&&x.conversation&&x.conversation.unread_for_staff).length);
+    } catch(error) {
+        console.error("Ошибка открытия обращения:",error);
+        showDeveloperMessagesStatus("Не удалось открыть переписку: "+error.message,true);
+    }
+}
+
+async function sendDeveloperStaffReply() {
+    if(!developerActiveConversationId) return;
+    const input=document.getElementById("developerStaffReplyText");
+    const body=input?input.value.trim():"";
+    if(!body){showDeveloperMessagesStatus("Напишите ответ.",true);return;}
+    try {
+        await api("rpc/developer_staff_reply",{method:"POST",body:JSON.stringify({p_conversation_id:developerActiveConversationId,p_body:body})});
+        input.value="";
+        await openDeveloperConversation(developerActiveConversationId);
+        showDeveloperMessagesStatus("Ответ отправлен.");
+    } catch(error) {
+        console.error("Ошибка ответа клиенту:",error);
+        showDeveloperMessagesStatus("Не удалось отправить ответ: "+error.message,true);
+    }
+}
+
+setInterval(refreshDeveloperMessagesBadge,30000);
+
+/* =====================================================
    МОБИЛЬНАЯ КНОПКА «НАЗАД»
    Единая пошаговая навигация для всех пользователей.
    Любое открытое внутреннее окно получает отдельную
@@ -8641,7 +8878,8 @@ const STO_MODAL_HISTORY_IDS = [
     "serviceModalBg",
     "backupBg",
     "versionCheckBg",
-    "kickSceneBg"
+    "kickSceneBg",
+    "developerMessagesModalBg"
 ];
 
 let stoModalHistoryStack = [];
@@ -8708,7 +8946,8 @@ function closeStoModalById(modalId) {
         vehicleModalBg: "closeVehicleModal",
         serviceModalBg: "closeServiceModal",
         backupBg: "closeBackupModal",
-        versionCheckBg: "closeVersionCheck"
+        versionCheckBg: "closeVersionCheck",
+        developerMessagesModalBg: "closeDeveloperMessages"
     };
 
     const closeName = closeById[modalId];
