@@ -9094,12 +9094,23 @@ async function closeDeveloperMessages() {
             const conversation = data && data.conversation;
 
             if (conversation && conversation.id) {
-                await api("rpc/developer_mark_read", {
+                const markReadResult = await api("rpc/developer_mark_read", {
                     method: "POST",
                     body: JSON.stringify({
                         p_conversation_id: conversation.id
                     })
                 });
+
+                /*
+                   Временная диагностика: показываем реальный ответ RPC
+                   прямо в окне чата, чтобы проверить, выполняется ли
+                   developer_mark_read от авторизованного пользователя.
+                */
+                console.log("developer_mark_read result:", markReadResult);
+                showDeveloperMessagesStatus(
+                    "Диагностика mark_read: " +
+                    JSON.stringify(markReadResult)
+                );
             }
 
             updateDeveloperClientMessagesButton(0);
