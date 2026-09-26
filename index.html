@@ -8825,6 +8825,26 @@ async function sendDeveloperClientMessage() {
     }
 }
 
+/* Enter отправляет сообщение в чате.
+   Shift+Enter оставляет перенос строки. */
+document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+
+    const target = event.target;
+    if (!target || target.tagName !== "TEXTAREA") return;
+
+    if (target.id === "developerClientMessageText") {
+        event.preventDefault();
+        sendDeveloperClientMessage();
+        return;
+    }
+
+    if (target.id === "developerStaffReplyText") {
+        event.preventDefault();
+        sendDeveloperStaffReply();
+    }
+});
+
 async function loadDeveloperStaffConversations() {
     try {
         const data=await api("rpc/developer_get_staff_conversations",{method:"POST",body:JSON.stringify({})});
