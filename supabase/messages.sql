@@ -643,3 +643,136 @@ grant execute on function public.developer_get_staff_conversations() to authenti
 grant execute on function public.developer_get_conversation_messages(uuid) to authenticated;
 grant execute on function public.developer_mark_read(uuid) to authenticated;
 grant execute on function public.developer_staff_reply(uuid,text) to authenticated;
+
+
+-- Актуальная версия клиентской переписки.
+-- Используется новым фронтендом вместо developer_get_my_conversation(),
+-- чтобы исключить устаревший REST/schema-cache ответ старой функции.
+create or replace function public.developer_get_my_conversation_v2()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+    current_user_id uuid;
+    conversation_id uuid;
+    conversation_json jsonb;
+    messages_json jsonb;
+    client_read_at timestamptz;
+begin
+    current_user_id := auth.uid();
+
+    if current_user_id is null then
+        raise exception 'Требуется авторизация';
+    end if;
+
+    select dc.id
+    into conversation_id
+    from public.developer_conversations dc
+    where dc.client_user_id = current_user_id
+    limit 1;
+
+    if conversation_id is null then
+        return jsonb_build_object(
+            'conversation', null,
+            'messages', '[]'::jsonb,
+            'unread_for_client', false,
+            'unread_for_client_count', 0
+        );
+    end if;
+
+    select jsonb_build_object(
+        'id', dc.id,
+        'client_user_id', dc.client_user_id,
+        'created_at', dc.created_at,
+        'updated_at', dc.updated_at
+    )
+    into conversation_json
+    from public.developer_conversations dc
+    where dc.id = conversation_id;
+
+    select r.last_read_at
+    into client_read_at
+    from public.developer_conversation_reads r
+    where r.conversation_id = conversation_id
+      and r.user_id = current_user_id;
+
+    select coalesce(
+        jsonb_agg(
+            jsonb_build_object(
+                'id', dm.id,
+                'sender_side', dm.sender_side,
+                'body', dm.body,
+                'is_read',
+                case
+                    when dm.sender_side = 'client' then
+                        exists (
+                            select 1
+                            from public.developer_conversation_reads r
+                            where r.conversation_id = conversation_id
+                              and r.user_id <> current_user_id
+                              and r.last_read_at >= dm.created_at
+                        )
+                    else
+                        client_read_at is not null
+                        and client_read_at >= dm.created_at
+                end,
+                'created_at', dm.created_at,
+                'edited_at', dm.edited_at,
+                'message_status',
+                case
+                    when dm.sender_side = 'client' then
+                        case
+                            when exists (
+                                select 1
+                                from public.developer_conversation_reads r
+                                where r.conversation_id = conversation_id
+                                  and r.user_id <> current_user_id
+                                  and r.last_read_at >= dm.created_at
+                            ) then 'read'
+                            else 'delivered'
+                        end
+                    else
+                        case
+                            when client_read_at is not null
+                                 and client_read_at >= dm.created_at
+                            then 'read'
+                            else 'delivered'
+                        end
+                end
+            )
+            order by dm.created_at
+        ),
+        '[]'::jsonb
+    )
+    into messages_json
+    from public.developer_messages dm
+    where dm.conversation_id = conversation_id;
+
+    return jsonb_build_object(
+        'conversation', conversation_json,
+        'messages', messages_json,
+        'unread_for_client',
+        exists (
+            select 1
+            from public.developer_messages dm
+            where dm.conversation_id = conversation_id
+              and dm.sender_side = 'staff'
+              and dm.created_at > coalesce(client_read_at, 'epoch'::timestamptz)
+        ),
+        'unread_for_client_count',
+        (
+            select count(*)::int
+            from public.developer_messages dm
+            where dm.conversation_id = conversation_id
+              and dm.sender_side = 'staff'
+              and dm.created_at > coalesce(client_read_at, 'epoch'::timestamptz)
+        )
+    );
+end;
+$$;
+
+revoke all on function public.developer_get_my_conversation_v2() from public;
+grant execute on function public.developer_get_my_conversation_v2() to authenticated;
