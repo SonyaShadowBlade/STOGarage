@@ -901,8 +901,12 @@
     .developer-message-status.read{color:#2563eb}
 
 .developer-chat-message-meta{font-size:11px;color:#64748b;margin-bottom:3px;display:flex;align-items:center;justify-content:space-between;gap:8px}
-    .developer-message-edit{padding:2px 6px;font-size:10px;border:1px solid #d1d5db;background:#fff;color:#475569;border-radius:6px;white-space:nowrap}
+    .developer-message-actions{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+    .developer-message-edit,
+    .developer-message-delete{padding:2px 6px;font-size:10px;border:1px solid #d1d5db;background:#fff;color:#475569;border-radius:6px;white-space:nowrap}
     .developer-message-edit:hover{background:#f8fafc}
+    .developer-message-delete{color:#b91c1c;border-color:#fecaca}
+    .developer-message-delete:hover{background:#fef2f2}
 
     .sanechka-readonly-note { margin-top:16px; padding:12px 14px; border-radius:12px; background:#f8fafc; color:#64748b; font-size:13px; line-height:1.5; text-align:center; }
     .sanechka-service-vehicle { border:1px solid #e5e7eb; border-radius:12px; padding:14px; margin-top:10px; background:#fff; cursor:pointer; }
@@ -8888,10 +8892,15 @@ function renderDeveloperChatMessages(targetId, messages) {
             (side === "staff" && isStaffAccount()) ||
             (side === "client" && isClientAccount());
 
-        const editButton = ownMessage && m.id
-            ? "<button class=\"developer-message-edit\" type=\"button\" onclick=\"event.stopPropagation(); editDeveloperMessage('" +
+        const messageActions = ownMessage && m.id
+            ? "<div class=\"developer-message-actions\">" +
+              "<button class=\"developer-message-edit\" type=\"button\" onclick=\"event.stopPropagation(); editDeveloperMessage('" +
               escapeAttr(messageId) +
-              "')\">✏️ Изменить</button>"
+              "')\">✏️ Изменить</button>" +
+              "<button class=\"developer-message-delete\" type=\"button\" onclick=\"event.stopPropagation(); deleteDeveloperMessage('" +
+              escapeAttr(messageId) +
+              "')\">🗑️ Удалить</button>" +
+              "</div>"
             : "";
 
         const editedAt = m.edited_at || m.updated_at || "";
@@ -8914,7 +8923,7 @@ function renderDeveloperChatMessages(targetId, messages) {
             title + ' · ' + escapeHtml(formatDeveloperMessageDate(m.created_at)) +
             editedLabel +
             deliveryLabel +
-            '</span>' + editButton +
+            '</span>' + messageActions +
             '</div><div>' + escapeHtml(m.body || "") +
             '</div></div>';
     }).join("");
@@ -9031,6 +9040,35 @@ async function editDeveloperMessage(messageId) {
         console.error("Ошибка изменения сообщения:", error);
         showDeveloperMessagesStatus(
             "Не удалось изменить сообщение: " + error.message,
+            true
+        );
+    }
+}
+
+async function deleteDeveloperMessage(messageId) {
+    if (!messageId) return;
+
+    if (!confirm("Удалить это сообщение?")) return;
+
+    try {
+        await api("rpc/developer_delete_message", {
+            method: "POST",
+            body: JSON.stringify({
+                p_message_id: messageId
+            })
+        });
+
+        if (isStaffAccount()) {
+            await openDeveloperConversation(developerActiveConversationId);
+        } else {
+            await loadDeveloperClientConversation();
+        }
+
+        showDeveloperMessagesStatus("Сообщение удалено.");
+    } catch (error) {
+        console.error("Ошибка удаления сообщения:", error);
+        showDeveloperMessagesStatus(
+            "Не удалось удалить сообщение: " + error.message,
             true
         );
     }
