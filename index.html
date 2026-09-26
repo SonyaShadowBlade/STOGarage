@@ -3888,13 +3888,27 @@ async function renderRentalDashboard(){
         const tripClass=r.status==="completed"?"rental-trip-completed":"rental-trip-active";
         const id=escapeHtml(String(r.id||""));
         const fuels=rs.filter(x=>x.type==="fuel"&&String(x.tripId||"")===String(r.id||""));
+        const sanechkaRental = isSanechkaAccount();
         const fuelsHtml=fuels.length
             ? '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed rgba(0,0,0,.15);"><div style="font-weight:800;margin-bottom:7px;">⛽ Заправки по поездке</div>'+fuels.map(f=>{
                 const fid=escapeHtml(String(f.id||""));
-                return '<div style="background:rgba(255,255,255,.65);border:1px solid rgba(0,0,0,.10);border-radius:8px;padding:9px;margin-top:7px;"><div style="font-weight:800;">⛽ '+escapeHtml(f.date||"")+' '+escapeHtml(f.time||"")+' · '+Number(f.liters||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+' л</div><div style="font-size:13px;color:#475569;margin-top:3px;">'+Number(f.cost||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+' '+escapeHtml(f.currency||"BYN")+' · '+Number(f.pricePerLiter||0).toLocaleString("ru-RU",{maximumFractionDigits:3})+' '+escapeHtml(f.currency||"BYN")+'/л · пробег '+Number(f.mileage||0).toLocaleString("ru-RU")+' км'+(f.note?' · '+escapeHtml(f.note):'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:7px;"><button class="btn-secondary small-button" onclick="openRentalFuelEditor(\''+id+'\',\''+fid+'\')">✏️ Изменить</button><button class="btn-secondary small-button" style="color:#b91c1c;border-color:#fca5a5;" onclick="deleteRentalFuel(\''+fid+'\')">🗑 Удалить</button></div></div>';
+                const fuelOpen = sanechkaRental
+                    ? ' onclick="openRentalFuelEditor(\''+id+'\',\''+fid+'\')"'
+                    : '';
+                const fuelEditButton = sanechkaRental
+                    ? ''
+                    : '<button class="btn-secondary small-button" onclick="event.stopPropagation();openRentalFuelEditor(\''+id+'\',\''+fid+'\')">✏️ Изменить</button>';
+                const fuelDeleteButton = '<button class="btn-secondary small-button" style="color:#b91c1c;border-color:#fca5a5;" onclick="event.stopPropagation();deleteRentalFuel(\''+fid+'\')">🗑 Удалить</button>';
+                return '<div style="background:rgba(255,255,255,.65);border:1px solid rgba(0,0,0,.10);border-radius:8px;padding:9px;margin-top:7px;cursor:'+(sanechkaRental?'pointer':'default')+';"'+fuelOpen+'><div style="font-weight:800;">⛽ '+escapeHtml(f.date||"")+' '+escapeHtml(f.time||"")+' · '+Number(f.liters||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+' л</div><div style="font-size:13px;color:#475569;margin-top:3px;">'+Number(f.cost||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+' '+escapeHtml(f.currency||"BYN")+' · '+Number(f.pricePerLiter||0).toLocaleString("ru-RU",{maximumFractionDigits:3})+' '+escapeHtml(f.currency||"BYN")+'/л · пробег '+Number(f.mileage||0).toLocaleString("ru-RU")+' км'+(f.note?' · '+escapeHtml(f.note):'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:7px;">'+fuelEditButton+fuelDeleteButton+'</div></div>';
             }).join("")+'</div>'
             : '<div style="margin-top:10px;color:#64748b;font-size:13px;">Заправок по этой поездке пока нет.</div>';
-        return '<div class="rental-record '+tripClass+'"><div class="rental-record-title">🛣 Поездка — '+escapeHtml(r.date||"")+' '+escapeHtml(r.time||"")+' · <strong>'+status+'</strong></div><div class="rental-record-meta">Водитель: '+escapeHtml(r.driver||"—")+' · '+Number(r.startMileage).toLocaleString("ru-RU")+' → '+endText+' · '+kmText+'<br>'+escapeHtml(r.note||"")+'</div>'+fuelsHtml+'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"><button class="btn-secondary small-button" onclick="openRentalTripEditor(\''+id+'\')">✏️ Открыть / дополнить</button><button class="btn-primary small-button" onclick="openRentalFuelEditor(\''+id+'\')">⛽ Добавить заправку</button><button class="btn-secondary small-button" style="color:#b91c1c;border-color:#fca5a5;" onclick="deleteRentalTrip(\''+id+'\')">🗑 Удалить поездку</button></div></div>';
+        const tripOpen = sanechkaRental
+            ? ' onclick="openRentalTripEditor(\''+id+'\')" style="cursor:pointer;"'
+            : '';
+        const tripActions = sanechkaRental
+            ? '<button class="btn-secondary small-button" style="color:#b91c1c;border-color:#fca5a5;" onclick="event.stopPropagation();deleteRentalTrip(\''+id+'\')">🗑 Удалить поездку</button>'
+            : '<button class="btn-secondary small-button" onclick="openRentalTripEditor(\''+id+'\')">✏️ Открыть / дополнить</button><button class="btn-primary small-button" onclick="openRentalFuelEditor(\''+id+'\')">⛽ Добавить заправку</button><button class="btn-secondary small-button" style="color:#b91c1c;border-color:#fca5a5;" onclick="event.stopPropagation();deleteRentalTrip(\''+id+'\')">🗑 Удалить поездку</button>';
+        return '<div class="rental-record '+tripClass+'"'+tripOpen+'><div class="rental-record-title">🛣 Поездка — '+escapeHtml(r.date||"")+' '+escapeHtml(r.time||"")+' · <strong>'+status+'</strong></div><div class="rental-record-meta">Водитель: '+escapeHtml(r.driver||"—")+' · '+Number(r.startMileage).toLocaleString("ru-RU")+' → '+endText+' · '+kmText+'<br>'+escapeHtml(r.note||"")+'</div>'+fuelsHtml+'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">'+tripActions+'</div></div>';
     }).join("");
     const issueHtml=issues.map(r=>'<div class="rental-record"><div class="rental-record-title">⚠️ Проблема — '+escapeHtml(r.date||"")+'</div><div class="rental-record-meta">Пробег: '+Number(r.mileage||0).toLocaleString("ru-RU")+' км<br>'+escapeHtml(r.text||"")+'</div></div>').join("");
     const legacyFuelHtml=legacyFuel.length
