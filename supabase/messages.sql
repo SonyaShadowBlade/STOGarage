@@ -220,15 +220,9 @@ begin
             else exists (
                 select 1
                 from public.developer_messages dm
-                left join public.developer_conversation_reads r
-                    on r.conversation_id = dm.conversation_id
-                   and r.user_id = auth.uid()
                 where dm.conversation_id = (c->>'id')::uuid
                   and dm.sender_side = 'staff'
-                  and (
-                      r.last_read_at is null
-                      or dm.created_at > r.last_read_at
-                  )
+                  and dm.is_read = false
             )
         end,
         'unread_for_client_count',
@@ -237,15 +231,9 @@ begin
             else (
                 select count(*)::int
                 from public.developer_messages dm
-                left join public.developer_conversation_reads r
-                    on r.conversation_id = dm.conversation_id
-                   and r.user_id = auth.uid()
                 where dm.conversation_id = (c->>'id')::uuid
                   and dm.sender_side = 'staff'
-                  and (
-                      r.last_read_at is null
-                      or dm.created_at > r.last_read_at
-                  )
+                  and dm.is_read = false
             )
         end
     );
@@ -349,29 +337,17 @@ as $$
                 exists (
                     select 1
                     from public.developer_messages um
-                    left join public.developer_conversation_reads r
-                        on r.conversation_id = um.conversation_id
-                       and r.user_id = auth.uid()
                     where um.conversation_id = c.id
                       and um.sender_side = 'client'
-                      and (
-                          r.last_read_at is null
-                          or um.created_at > r.last_read_at
-                      )
+                      and um.is_read = false
                 ),
             'unread_for_staff_count',
                 (
                     select count(*)::int
                     from public.developer_messages um
-                    left join public.developer_conversation_reads r
-                        on r.conversation_id = um.conversation_id
-                       and r.user_id = auth.uid()
                     where um.conversation_id = c.id
                       and um.sender_side = 'client'
-                      and (
-                          r.last_read_at is null
-                          or um.created_at > r.last_read_at
-                      )
+                      and um.is_read = false
                 ),
             'updated_at', c.updated_at
         ),
@@ -522,7 +498,7 @@ begin
         auth.uid(),
         'staff',
         trim(p_body),
-        true
+        false
     )
     returning id into message_id;
 
