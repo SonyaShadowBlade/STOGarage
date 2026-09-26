@@ -2427,6 +2427,7 @@ let authSession = null;
 let realtimeClient = null;
 let realtimeChannel = null;
 let realtimeReloadTimer = null;
+let rentalRealtimeReloadTimer = null;
 
 function getStoredSession() {
     try {
@@ -2853,6 +2854,21 @@ function scheduleRealtimeReload() {
     }, 500);
 }
 
+function scheduleRentalRealtimeReload() {
+    clearTimeout(rentalRealtimeReloadTimer);
+    rentalRealtimeReloadTimer = setTimeout(async () => {
+        if (!authSession || !authSession.access_token) return;
+        const modal = document.getElementById("rentalModalBg");
+        if (!modal || modal.style.display === "none") return;
+
+        try {
+            await renderRentalDashboard();
+        } catch (error) {
+            console.error("Ошибка обновления аренды в реальном времени:", error);
+        }
+    }, 150);
+}
+
 async function startRealtimeSync() {
     // Санечка не подписывается на Realtime основных таблиц СТО.
     if (isSanechkaAccount()) return;
@@ -2935,6 +2951,33 @@ async function startRealtimeSync() {
                     table: "service_parts"
                 },
                 scheduleRealtimeReload
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "rental_trips"
+                },
+                scheduleRentalRealtimeReload
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "rental_fuel"
+                },
+                scheduleRentalRealtimeReload
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "rental_issues"
+                },
+                scheduleRentalRealtimeReload
             );
 
         realtimeChannel.subscribe((status, error) => {
@@ -2971,6 +3014,7 @@ function stopRealtimeSync() {
 
     realtimeChannel = null;
     clearTimeout(realtimeReloadTimer);
+    clearTimeout(rentalRealtimeReloadTimer);
 }
 
 function getAuthHeaders() {
@@ -3577,7 +3621,10 @@ async function renderSanechkaTripHistory() {
 }
 
 async function getCloudRentalRecords(vehicleId) {
-    if (!isSanechkaAccount()) return [];
+    // Арендные записи хранятся в Supabase независимо от того,
+    // кто их создал. Санечка пишет их из своего кабинета, а
+    // администратор и папа читают те же записи по vehicle_id.
+    if (!authSession || !authSession.access_token) return [];
     const [trips, fuels, issues] = await Promise.all([
         api("rental_trips?vehicle_id=eq." + encodeURIComponent(vehicleId) + "&order=trip_date.desc,created_at.desc"),
         api("rental_fuel?vehicle_id=eq." + encodeURIComponent(vehicleId) + "&order=fuel_date.desc,created_at.desc"),
@@ -3865,7 +3912,7 @@ function showRentalTab(tab){
 async function renderRentalDashboard(){
     const v=selectedRentalVehicle();
     if(!v)return;
-    const rs=isSanechkaAccount()?await getCloudRentalRecords(v.id):getRentalRecords(v.id);
+    const rs=await getCloudRentalRecords(v.id);
     rentalDashboardRecords=rs;
     const history=document.getElementById("rentalHistory");
     if(!history)return;
