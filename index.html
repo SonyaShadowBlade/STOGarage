@@ -8989,11 +8989,31 @@ async function refreshDeveloperActiveConversation() {
     }
 }
 
+let developerMessagesRefreshInProgress = false;
+
+async function refreshDeveloperMessagesNow() {
+    if (developerMessagesRefreshInProgress) return;
+    developerMessagesRefreshInProgress = true;
+
+    try {
+        await Promise.allSettled([
+            refreshDeveloperMessagesBadge(),
+            refreshDeveloperClientMessagesBadge(),
+            refreshDeveloperActiveConversation()
+        ]);
+    } finally {
+        developerMessagesRefreshInProgress = false;
+    }
+}
+
+/*
+   Пока окно сообщений открыто, обновляем чат чаще.
+   Это нужно именно для уже открытого диалога: новое сообщение
+   должно появиться само, без закрытия и повторного открытия.
+*/
 setInterval(() => {
-    refreshDeveloperMessagesBadge();
-    refreshDeveloperClientMessagesBadge();
-    refreshDeveloperActiveConversation();
-}, 5000);
+    refreshDeveloperMessagesNow();
+}, 1000);
 
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
@@ -9003,9 +9023,11 @@ document.addEventListener("visibilitychange", () => {
 });
 
 window.addEventListener("focus", () => {
-    refreshDeveloperMessagesBadge();
-    refreshDeveloperClientMessagesBadge();
-    refreshDeveloperActiveConversation();
+    refreshDeveloperMessagesNow();
+});
+
+window.addEventListener("pageshow", () => {
+    refreshDeveloperMessagesNow();
 });
 
 /* =====================================================
