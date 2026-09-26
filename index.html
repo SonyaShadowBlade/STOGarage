@@ -9134,10 +9134,16 @@ async function loadDeveloperClientConversation() {
         const conversation = data && data.conversation;
 
         if (conversation && conversation.id) {
-            await api("rpc/developer_mark_read",{
+            const markReadResult = await api("rpc/developer_mark_read",{
                 method:"POST",
                 body:JSON.stringify({p_conversation_id:conversation.id})
             });
+
+            console.log("developer_mark_read result:", markReadResult);
+            showDeveloperMessagesStatus(
+                "Диагностика mark_read: " +
+                JSON.stringify(markReadResult)
+            );
         }
 
         const refreshed = conversation && conversation.id
