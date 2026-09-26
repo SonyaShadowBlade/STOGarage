@@ -1075,6 +1075,7 @@
                 <button class="btn-secondary" onclick="closeDeveloperMessages()">✕</button>
             </div>
             <div id="developerMessagesStatus" class="status" style="display:none;"></div>
+            <div id="developerMarkReadDebug" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:8px;background:#fff7ed;color:#9a3412;border:1px solid #fdba74;font-size:12px;line-height:1.4;word-break:break-word;"></div>
             <div id="developerClientMessagePanel" class="developer-client-message-panel" style="display:none;">
                 <div id="developerClientChat" class="developer-chat-list"></div>
                 <div class="field developer-message-composer" style="margin-bottom:0;"><label>Ваше сообщение</label><textarea id="developerClientMessageText" maxlength="5000" placeholder="Опишите ошибку, предложение или вопрос..."></textarea></div>
@@ -9047,7 +9048,7 @@ async function refreshDeveloperMessagesBadge() {
     }
 }
 
-async function openDeveloperMessages() {
+async async function openDeveloperMessages() {
     const bg = document.getElementById("developerMessagesModalBg");
     if (!bg) return;
     bg.style.display = "block";
@@ -9133,17 +9134,31 @@ async function loadDeveloperClientConversation() {
         const data = await api("rpc/developer_get_my_conversation",{method:"POST",body:JSON.stringify({})});
         const conversation = data && data.conversation;
 
-        if (conversation && conversation.id) {
-            const markReadResult = await api("rpc/developer_mark_read",{
-                method:"POST",
-                body:JSON.stringify({p_conversation_id:conversation.id})
-            });
+        let markReadDebug = "";
 
-            console.log("developer_mark_read result:", markReadResult);
-            showDeveloperMessagesStatus(
-                "Диагностика mark_read: " +
-                JSON.stringify(markReadResult)
-            );
+        if (conversation && conversation.id) {
+            try {
+                const markReadResult = await api("rpc/developer_mark_read",{
+                    method:"POST",
+                    body:JSON.stringify({p_conversation_id:conversation.id})
+                });
+
+                markReadDebug =
+                    "developer_mark_read: " +
+                    JSON.stringify(markReadResult);
+
+                console.log("developer_mark_read result:", markReadResult);
+            } catch (markReadError) {
+                markReadDebug =
+                    "developer_mark_read ОШИБКА: " +
+                    String(markReadError && markReadError.message || markReadError);
+
+                console.error("developer_mark_read error:", markReadError);
+            }
+        } else {
+            markReadDebug =
+                "developer_mark_read не вызван: conversation.id отсутствует. Ответ get_my_conversation: " +
+                JSON.stringify(data);
         }
 
         const refreshed = conversation && conversation.id
@@ -9160,6 +9175,22 @@ async function loadDeveloperClientConversation() {
         renderDeveloperChatMessages("developerClientChat",messages);
 
         /*
+           Диагностику показываем ПОСЛЕ всех render/update операций,
+           чтобы она не была сразу перезаписана другим кодом.
+        */
+        const debugEl = document.getElementById("developerMarkReadDebug");
+        if (debugEl) {
+            debugEl.style.display = "block";
+            debugEl.textContent =
+                markReadDebug +
+                " | unread_for_client_count после повторного запроса: " +
+                String(
+                    refreshed &&
+                    refreshed.unread_for_client_count
+                );
+        }
+
+        /*
            После успешного mark_read() результат refreshed — самый
            свежий источник истины для кнопки.
         */
@@ -9168,6 +9199,13 @@ async function loadDeveloperClientConversation() {
         );
     } catch (error) {
         console.error("Ошибка загрузки сообщений клиента:",error);
+        const debugEl = document.getElementById("developerMarkReadDebug");
+        if (debugEl) {
+            debugEl.style.display = "block";
+            debugEl.textContent =
+                "Ошибка загрузки чата: " +
+                String(error && error.message || error);
+        }
         showDeveloperMessagesStatus(
             "Не удалось загрузить сообщения: "+error.message,
             true
