@@ -3252,7 +3252,10 @@ async function getCloudRentalRecords(vehicleId) {
             mileage: r.mileage,
             liters: r.liters,
             cost: r.cost,
+            currency: r.currency || "BYN",
+            pricePerLiter: r.price_per_liter,
             note: r.note || "",
+            time: r.fuel_time || "",
             createdAt: r.created_at
         })),
         ...issues.map(r => ({
@@ -3286,6 +3289,7 @@ async function saveCloudRentalRecord(vehicleId, record) {
                 trip_date: record.date || new Date().toISOString().slice(0, 10),
                 start_mileage: record.startMileage,
                 end_mileage: record.endMileage,
+                trip_time: record.time || null,
                 route_note: record.note || null
             })
         });
@@ -3302,6 +3306,9 @@ async function saveCloudRentalRecord(vehicleId, record) {
                 mileage: record.mileage,
                 liters: record.liters,
                 cost: record.cost,
+                currency: record.currency || "BYN",
+                price_per_liter: record.pricePerLiter,
+                fuel_time: record.time || null,
                 note: record.note || null
             })
         });
@@ -3526,10 +3533,10 @@ async function renderRentalDashboard(){
     document.getElementById("rentalHistory").innerHTML=rs.length?[...rs].sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))).map(r=>{
         if(r.type==="trip"){
             const d=Math.max(0,Number(r.endMileage)-Number(r.startMileage));
-            return '<div class="rental-record"><div class="rental-record-title">🛣 Поездка — '+escapeHtml(r.date||"")+'</div><div class="rental-record-meta">Водитель: '+escapeHtml(r.driver||"—")+' · '+Number(r.startMileage).toLocaleString("ru-RU")+' → '+Number(r.endMileage).toLocaleString("ru-RU")+' км · '+d.toLocaleString("ru-RU")+' км<br>'+escapeHtml(r.note||"")+'</div></div>';
+            return '<div class="rental-record"><div class="rental-record-title">🛣 Поездка — '+escapeHtml(r.date||"")+' '+escapeHtml(r.time||"")+'</div><div class="rental-record-meta">Водитель: '+escapeHtml(r.driver||"—")+' · '+Number(r.startMileage).toLocaleString("ru-RU")+' → '+Number(r.endMileage).toLocaleString("ru-RU")+' км · '+d.toLocaleString("ru-RU")+' км<br>'+escapeHtml(r.note||"")+'</div></div>';
         }
         if(r.type==="fuel")
-            return '<div class="rental-record"><div class="rental-record-title">⛽ Заправка — '+escapeHtml(r.date||"")+'</div><div class="rental-record-meta">'+Number(r.liters||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+' л · '+Number(r.cost||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+' · пробег '+Number(r.mileage||0).toLocaleString("ru-RU")+' км<br>'+escapeHtml(r.note||"")+'</div></div>';
+            return '<div class="rental-record"><div class="rental-record-title">⛽ Заправка — '+escapeHtml(r.date||"")+' '+escapeHtml(r.time||"")+'</div><div class="rental-record-meta">'+Number(r.liters||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+' л · '+Number(r.cost||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+' '+escapeHtml(r.currency||"BYN")+' · '+Number(r.pricePerLiter||0).toLocaleString("ru-RU",{maximumFractionDigits:3})+' '+escapeHtml(r.currency||"BYN")+'/л · пробег '+Number(r.mileage||0).toLocaleString("ru-RU")+' км<br>'+escapeHtml(r.note||"")+'</div></div>';
         return '<div class="rental-record"><div class="rental-record-title">⚠️ Проблема — '+escapeHtml(r.date||"")+'</div><div class="rental-record-meta">Пробег: '+Number(r.mileage||0).toLocaleString("ru-RU")+' км<br>'+escapeHtml(r.text||"")+'</div></div>';
     }).join(""):"<div class=\"empty\">Записей по аренде пока нет.</div>";
 }
