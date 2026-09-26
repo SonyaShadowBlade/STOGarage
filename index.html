@@ -9050,6 +9050,23 @@ async function closeDeveloperMessages() {
     const wasStaffChat = isStaffAccount() && !!developerActiveConversationId;
     const conversationId = developerActiveConversationId;
 
+    /*
+       Сначала закрываем окно и сразу убираем локальный unread.
+       Это важно и для обычного ✕, и для кнопки «Назад» телефона:
+       визуальный индикатор не должен ждать завершения RPC.
+    */
+    const bg = document.getElementById("developerMessagesModalBg");
+    if (bg) bg.style.display = "none";
+
+    if (isStaffAccount()) {
+        updateDeveloperMessagesButton(0);
+    } else {
+        updateDeveloperClientMessagesButton(0);
+    }
+
+    developerActiveConversationId = null;
+    showDeveloperMessagesStatus("");
+
     if (wasStaffChat && conversationId) {
         try {
             await api("rpc/developer_mark_read", {
@@ -9061,17 +9078,10 @@ async function closeDeveloperMessages() {
         } catch (error) {
             console.warn("Не удалось подтвердить прочтение при закрытии чата:", error);
         }
-    }
 
-    const bg = document.getElementById("developerMessagesModalBg");
-    if (bg) bg.style.display = "none";
-    developerActiveConversationId = null;
-    showDeveloperMessagesStatus("");
-
-    if (isStaffAccount()) {
-        await refreshDeveloperMessagesBadge();
-    } else {
-        updateDeveloperClientMessagesButton(0);
+        if (isStaffAccount()) {
+            await refreshDeveloperMessagesBadge();
+        }
     }
 }
 
