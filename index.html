@@ -8749,7 +8749,11 @@ function updateDeveloperClientMessagesButton(unreadCount = 0) {
     button.classList.toggle("has-unread", count > 0);
 }
 
+let developerClientUnreadRefreshToken = 0;
+
 async function refreshDeveloperClientMessagesBadge() {
+    const requestToken = ++developerClientUnreadRefreshToken;
+
     if (!isClientAccount()) {
         updateDeveloperClientMessagesButton(0);
         return;
@@ -8760,9 +8764,19 @@ async function refreshDeveloperClientMessagesBadge() {
             method: "POST",
             body: JSON.stringify({})
         });
-        const conversation = data && data.conversation;
-        updateDeveloperClientMessagesButton(data && data.unread_for_client_count);
+
+        /*
+           Не даём более старому запросу перезаписать результат
+           более свежего запроса. Это важно при одновременном
+           открытии чата, mark_read() и фоновой проверке.
+        */
+        if (requestToken !== developerClientUnreadRefreshToken) return;
+
+        updateDeveloperClientMessagesButton(
+            data && data.unread_for_client_count
+        );
     } catch (error) {
+        if (requestToken !== developerClientUnreadRefreshToken) return;
         console.warn("Не удалось обновить уведомление клиента:", error);
     }
 }
@@ -9077,21 +9091,50 @@ async function closeDeveloperMessages() {
 }
 
 async function loadDeveloperClientConversation() {
+    /*
+       Инвалидируем все уже запущенные фоновые проверки счётчика.
+       Иначе старый запрос может вернуться после mark_read() и снова
+       покрасить кнопку в жёлтый цвет устаревшим значением.
+    */
+    ++developerClientUnreadRefreshToken;
+
     try {
         const data = await api("rpc/developer_get_my_conversation",{method:"POST",body:JSON.stringify({})});
         const conversation = data && data.conversation;
+
         if (conversation && conversation.id) {
-            await api("rpc/developer_mark_read",{method:"POST",body:JSON.stringify({p_conversation_id:conversation.id})});
+            await api("rpc/developer_mark_read",{
+                method:"POST",
+                body:JSON.stringify({p_conversation_id:conversation.id})
+            });
         }
+
         const refreshed = conversation && conversation.id
-            ? await api("rpc/developer_get_my_conversation",{method:"POST",body:JSON.stringify({})})
+            ? await api("rpc/developer_get_my_conversation",{
+                method:"POST",
+                body:JSON.stringify({})
+            })
             : data;
-        const messages = refreshed && Array.isArray(refreshed.messages) ? refreshed.messages : [];
+
+        const messages = refreshed && Array.isArray(refreshed.messages)
+            ? refreshed.messages
+            : [];
+
         renderDeveloperChatMessages("developerClientChat",messages);
-        updateDeveloperClientMessagesButton(refreshed && refreshed.unread_for_client_count);
+
+        /*
+           После успешного mark_read() результат refreshed — самый
+           свежий источник истины для кнопки.
+        */
+        updateDeveloperClientMessagesButton(
+            refreshed && refreshed.unread_for_client_count
+        );
     } catch (error) {
         console.error("Ошибка загрузки сообщений клиента:",error);
-        showDeveloperMessagesStatus("Не удалось загрузить сообщения: "+error.message,true);
+        showDeveloperMessagesStatus(
+            "Не удалось загрузить сообщения: "+error.message,
+            true
+        );
     }
 }
 
