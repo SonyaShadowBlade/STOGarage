@@ -8761,8 +8761,6 @@ function initStoModalHistory() {
     });
 
     stoModalHistoryObserver = new MutationObserver(() => {
-        if (stoModalHistoryHandlingPop) return;
-
         STO_MODAL_HISTORY_IDS.forEach(id => {
             const modal = document.getElementById(id);
 
@@ -8776,6 +8774,8 @@ function initStoModalHistory() {
             if (visible === previous) return;
 
             tracked.set(id, visible);
+
+            if (stoModalHistoryHandlingPop) return;
 
             if (visible) {
                 stoHandleModalOpened(id);
