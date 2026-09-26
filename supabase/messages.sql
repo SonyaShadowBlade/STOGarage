@@ -28,6 +28,43 @@ create index if not exists developer_messages_conversation_idx
 create index if not exists developer_messages_unread_idx
     on public.developer_messages(is_read, created_at);
 
+
+-- Индивидуальная отметка прочтения.
+-- Важно: прочтение Александром НЕ помечает сообщение прочитанным для папы,
+-- и наоборот. У каждого сотрудника и клиента своё состояние чтения.
+create table if not exists public.developer_conversation_reads (
+    conversation_id uuid not null references public.developer_conversations(id) on delete cascade,
+    user_id uuid not null references auth.users(id) on delete cascade,
+    last_read_at timestamptz not null default now(),
+    primary key (conversation_id, user_id)
+);
+
+create index if not exists developer_conversation_reads_user_idx
+    on public.developer_conversation_reads(user_id, conversation_id);
+
+alter table public.developer_conversation_reads enable row level security;
+
+drop policy if exists "developer_conversation_reads_select_own" on public.developer_conversation_reads;
+create policy "developer_conversation_reads_select_own"
+on public.developer_conversation_reads
+for select to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "developer_conversation_reads_insert_own" on public.developer_conversation_reads;
+create policy "developer_conversation_reads_insert_own"
+on public.developer_conversation_reads
+for insert to authenticated
+with check (user_id = auth.uid());
+
+drop policy if exists "developer_conversation_reads_update_own" on public.developer_conversation_reads;
+create policy "developer_conversation_reads_update_own"
+on public.developer_conversation_reads
+for update to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+revoke delete on public.developer_conversation_reads from authenticated;
+
 alter table public.developer_conversations enable row level security;
 alter table public.developer_messages enable row level security;
 
@@ -167,8 +204,26 @@ begin
     where dm.conversation_id = (c->>'id')::uuid;
 
     return jsonb_build_object(
-        'conversation', c,
-        'messages', msgs
+        'conversation',
+        c || null,
+        'messages', msgs,
+        'unread_for_client',
+        case
+            when c is null then false
+            else exists (
+                select 1
+                from public.developer_messages dm
+                left join public.developer_conversation_reads r
+                    on r.conversation_id = dm.conversation_id
+                   and r.user_id = auth.uid()
+                where dm.conversation_id = (c->>'id')::uuid
+                  and dm.sender_side = 'staff'
+                  and (
+                      r.last_read_at is null
+                      or dm.created_at > r.last_read_at
+                  )
+            )
+        end
     );
 end;
 $$;
@@ -254,9 +309,15 @@ as $$
                 exists (
                     select 1
                     from public.developer_messages um
+                    left join public.developer_conversation_reads r
+                        on r.conversation_id = um.conversation_id
+                       and r.user_id = auth.uid()
                     where um.conversation_id = c.id
                       and um.sender_side = 'client'
-                      and um.is_read = false
+                      and (
+                          r.last_read_at is null
+                          or um.created_at > r.last_read_at
+                      )
                 ),
             'updated_at', c.updated_at
         ),
@@ -308,15 +369,34 @@ security definer
 set search_path = public
 as $$
 begin
-    if not public.is_staff() then
+    if auth.uid() is null then
         return;
     end if;
 
-    update public.developer_messages
-    set is_read = true
-    where conversation_id = p_conversation_id
-      and sender_side = 'client'
-      and is_read = false;
+    if not (
+        public.is_staff()
+        or exists (
+            select 1
+            from public.developer_conversations c
+            where c.id = p_conversation_id
+              and c.client_user_id = auth.uid()
+        )
+    ) then
+        return;
+    end if;
+
+    insert into public.developer_conversation_reads(
+        conversation_id,
+        user_id,
+        last_read_at
+    )
+    values (
+        p_conversation_id,
+        auth.uid(),
+        now()
+    )
+    on conflict (conversation_id, user_id)
+    do update set last_read_at = excluded.last_read_at;
 end;
 $$;
 
