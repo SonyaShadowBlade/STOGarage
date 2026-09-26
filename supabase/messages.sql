@@ -193,7 +193,8 @@ begin
                 'sender_side', dm.sender_side,
                 'body', dm.body,
                 'is_read', dm.is_read,
-                'created_at', dm.created_at
+                'created_at', dm.created_at,
+                'edited_at', dm.edited_at
             )
             order by dm.created_at
         ),
@@ -369,7 +370,8 @@ as $$
         'sender_side', dm.sender_side,
         'body', dm.body,
         'is_read', dm.is_read,
-        'created_at', dm.created_at
+        'created_at', dm.created_at,
+        'edited_at', dm.edited_at
     )
     from public.developer_messages dm
     where public.is_staff()
