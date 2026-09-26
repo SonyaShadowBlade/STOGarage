@@ -299,9 +299,25 @@ as $$
             'client_user_id', c.client_user_id,
             'client_name',
                 coalesce(
+                    (
+                        select nullif(trim(cl.name), '')
+                        from public.rental_vehicle_access rva
+                        join public.vehicles rv on rv.id = rva.vehicle_id
+                        join public.clients cl on cl.id = rv.client_id
+                        where rva.user_id = c.client_user_id
+                        order by rva.created_at asc nulls last
+                        limit 1
+                    ),
+                    (
+                        select nullif(trim(cl2.name), '')
+                        from public.service_client_access sca
+                        join public.clients cl2 on cl2.id = sca.client_id
+                        where sca.user_id = c.client_user_id
+                        order by sca.created_at asc nulls last
+                        limit 1
+                    ),
                     nullif(u.raw_user_meta_data->>'name',''),
                     nullif(u.raw_user_meta_data->>'full_name',''),
-                    u.email,
                     'Клиент'
                 ),
             'client_email', u.email,
