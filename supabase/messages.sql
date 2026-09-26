@@ -248,7 +248,13 @@ begin
                 from public.developer_messages dm
                 where dm.conversation_id = (c->>'id')::uuid
                   and dm.sender_side = 'staff'
-                  and dm.is_read = false
+                  and not exists (
+                      select 1
+                      from public.developer_conversation_reads dcr
+                      where dcr.conversation_id = dm.conversation_id
+                        and dcr.user_id = auth.uid()
+                        and dcr.last_read_at >= dm.created_at
+                  )
             )
         end
     );
