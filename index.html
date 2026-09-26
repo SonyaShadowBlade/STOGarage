@@ -3966,19 +3966,8 @@ async function renderRentalDashboard(){
 async function addRentalRecord(r){
     const v=selectedRentalVehicle();
     if(!v){alert("Сначала выберите автомобиль.");return false}
-    if(isSanechkaAccount()){
-        await saveCloudRentalRecord(v.id,r);
-    }else{
-        const rs=getRentalRecords(v.id);
-        if(r.id){
-            const index=rs.findIndex(x=>String(x.id)===String(r.id));
-            if(index<0)throw new Error("Поездка не найдена.");
-            rs[index]={...rs[index],...r};
-        }else{
-            rs.push({id:Date.now()+"_"+Math.random().toString(36).slice(2),createdAt:new Date().toISOString(),...r});
-        }
-        saveRentalRecords(v.id,rs);
-    }
+    // Аренда теперь единая облачная история для Санечки, админа и папы.
+    await saveCloudRentalRecord(v.id,r);
     await renderRentalDashboard();
     return true;
 }
@@ -3988,11 +3977,7 @@ async function deleteRentalTrip(id){
     if(!confirm("Удалить эту поездку? Это действие нельзя отменить."))return;
     const v=selectedRentalVehicle(); if(!v)return;
     try{
-        if(isSanechkaAccount()){
-            await api("rental_trips?id=eq."+encodeURIComponent(id),{method:"DELETE",headers:{"Prefer":"return=minimal"}});
-        }else{
-            saveRentalRecords(v.id,getRentalRecords(v.id).filter(x=>String(x.id)!==String(id)));
-        }
+        await api("rental_trips?id=eq."+encodeURIComponent(id),{method:"DELETE",headers:{"Prefer":"return=minimal"}});
         if(String(rentalEditingTripId)===String(id)) closeRentalEntryModal();
         await renderRentalDashboard();
         rentalSaved("Поездка удалена.");
