@@ -6395,9 +6395,11 @@ function changeQuantity(
     value += change;
 
 
-    if (value < 0.01) {
+    // Не перескакиваем с 0 обратно на 0.01 при уменьшении.
+    // Минимум для стрелок/кнопок — 0.
+    if (value < 0) {
 
-        value = 0.01;
+        value = 0;
 
     }
 
