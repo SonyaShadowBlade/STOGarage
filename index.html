@@ -5889,7 +5889,12 @@ function renderService(
 
                             <div
                                 class="line-row"
+                                style="${item.paid_by === "Мной" ? "background:#ffdede;" : item.paid_by === "Клиентом" ? "background:#ddf7df;" : ""}"
                             >
+
+                                <div style="font-weight:600;">
+                                    ${escapeHtml(item.paid_by || "")}
+                                </div>
 
                                 <div>
                                     ${escapeHtml(
@@ -6440,7 +6445,8 @@ function addWorkRow(
     quantity = 1,
     price = "",
     totalPrice = "",
-    currency = "BYN"
+    currency = "BYN",
+    paidBy = ""
 ) {
 
     const container =
@@ -6460,6 +6466,12 @@ function addWorkRow(
 
 
     row.innerHTML = `
+
+        <select class="work-paid-by" style="min-width:125px;">
+            <option value="">Кем оплачено</option>
+            <option value="Мной" ${paidBy === "Мной" ? "selected" : ""}>Мной</option>
+            <option value="Клиентом" ${paidBy === "Клиентом" ? "selected" : ""}>Клиентом</option>
+        </select>
 
         <div class="autocomplete-wrap">
 
@@ -6566,8 +6578,11 @@ function addWorkRow(
 
     const currencySelect = row.querySelector(".work-currency");
     if (currencySelect) currencySelect.addEventListener("change", updateServiceFormTotal);
+    const paidBySelect = row.querySelector(".work-paid-by");
+    if (paidBySelect) paidBySelect.addEventListener("change", () => updatePaidByStyle(row));
     const quantityInput = row.querySelector(".work-quantity");
     if (quantityInput) quantityInput.addEventListener("input", () => updateLineTotal(quantityInput));
+    updatePaidByStyle(row);
     updateServiceFormTotal();
 
     setupAutocomplete(
@@ -6669,6 +6684,17 @@ function addPartRow(
 function updatePartPaidByStyle(row) {
     if (!row) return;
     const paidBy = row.querySelector(".part-paid-by")?.value || "";
+    row.style.background = paidBy === "Мной"
+        ? "#ffdede"
+        : paidBy === "Клиентом"
+            ? "#ddf7df"
+            : "";
+}
+
+function updatePaidByStyle(row) {
+    if (!row) return;
+    const select = row.querySelector(".work-paid-by");
+    const paidBy = select?.value || "";
     row.style.background = paidBy === "Мной"
         ? "#ffdede"
         : paidBy === "Клиентом"
@@ -7164,6 +7190,9 @@ async function saveService() {
                     )
                     .value;
 
+            const paidBy =
+                row.querySelector(".work-paid-by")?.value || "";
+
 
             await api(
 
@@ -7200,7 +7229,9 @@ async function saveService() {
                                     currency
                                 )
                                 ? currency
-                                : "BYN"
+                                : "BYN",
+
+                            paid_by: paidBy || null
 
                         })
 
@@ -7625,7 +7656,9 @@ async function editService(
 
                 :
 
-                "EUR"
+                "EUR",
+
+                item.paid_by || ""
 
             );
 
@@ -7978,6 +8011,9 @@ async function updateExistingService(
                     .value
                     .trim();
 
+            const paidBy =
+                row.querySelector(".part-paid-by")?.value || "";
+
 
             const quantity =
                 Number(
@@ -8037,6 +8073,9 @@ async function updateExistingService(
 
                             supplier:
                                 supplier,
+
+                            paid_by:
+                                paidBy || null,
 
                             quantity:
                                 quantity > 0
@@ -8304,6 +8343,15 @@ function openQuickLineDialog(
                     ${isPart ? "Добавить запчасть" : "Добавить работу"}
                 </div>
 
+                <div class="field">
+                    <label>Кем оплачено</label>
+                    <select id="quickLinePaidBy">
+                        <option value="">Не указано</option>
+                        <option value="Мной">Мной</option>
+                        <option value="Клиентом">Клиентом</option>
+                    </select>
+                </div>
+
                 <div class="field autocomplete-wrap">
                     <label>${isPart ? "Запчасть" : "Вид работы"} *</label>
 
@@ -8516,7 +8564,10 @@ function openQuickLineDialog(
                                 currency
                             )
                             ? currency
-                            : "BYN"
+                            : "BYN",
+
+                        paidBy:
+                            dialog.querySelector("#quickLinePaidBy").value || ""
 
                     };
 
@@ -8663,7 +8714,10 @@ async function addWorkToService(
                             data.totalPrice,
 
                         currency:
-                            data.currency
+                            data.currency,
+
+                        paid_by:
+                            data.paidBy || null
 
                     })
 
@@ -8733,6 +8787,9 @@ async function addPartToService(
 
                         supplier:
                             data.supplier,
+
+                        paid_by:
+                            data.paidBy || null,
 
                         quantity:
                             data.quantity,
