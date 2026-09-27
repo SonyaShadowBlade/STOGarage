@@ -10204,7 +10204,8 @@ const STO_MODAL_HISTORY_IDS = [
     "backupBg",
     "versionCheckBg",
     "kickSceneBg",
-    "developerMessagesModalBg"
+    "developerMessagesModalBg",
+    "organizerTaskModalBg"
 ];
 
 let stoModalHistoryStack = [];
@@ -10272,7 +10273,8 @@ function closeStoModalById(modalId) {
         serviceModalBg: "closeServiceModal",
         backupBg: "closeBackupModal",
         versionCheckBg: "closeVersionCheck",
-        developerMessagesModalBg: "closeDeveloperMessages"
+        developerMessagesModalBg: "closeDeveloperMessages",
+        organizerTaskModalBg: "closeOrganizerTaskModal"
     };
 
     const closeName = closeById[modalId];
