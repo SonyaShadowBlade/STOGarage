@@ -2011,8 +2011,9 @@
 
 <div id="servicePaymentModalBg" class="modal-bg" style="z-index:1100;">
 <div class="modal" style="max-width:520px;">
-<div class="modal-header"><h2>Внести средства</h2><button class="btn-secondary" onclick="closeServicePaymentModal()">✕</button></div>
+<div class="modal-header"><h2 id="servicePaymentModalTitle">Внести средства</h2><button class="btn-secondary" onclick="closeServicePaymentModal()">✕</button></div>
 <div class="field"><label>Дата</label><input id="servicePaymentDate" type="date"></div>
+<div class="field"><label>Время</label><input id="servicePaymentTime" type="time"></div>
 <div class="field"><label>Сумма</label><input id="servicePaymentAmount" type="number" min="0.01" step="0.01" placeholder="Введите сумму"></div>
 <div id="servicePaymentHistory" style="margin-top:16px;"></div>
 <div class="form-buttons"><button id="servicePaymentSaveButton" class="btn-success" onclick="saveServicePayment()">Внести средства</button><button class="btn-secondary" onclick="closeServicePaymentModal()">Отмена</button></div>
