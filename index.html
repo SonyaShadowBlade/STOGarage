@@ -1153,121 +1153,6 @@
     }
 }
 
-
-    /* =====================================================
-       МАМИН ОРГАНАЙЗЕР
-    ===================================================== */
-    .organizer-portal {
-        display: none;
-        max-width: 900px;
-        margin: 0 auto;
-    }
-    .organizer-portal.visible {
-        display: block;
-    }
-    .organizer-profile {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 16px;
-        padding: 14px 16px;
-        background: #fff;
-        border-radius: 14px;
-        box-shadow: 0 3px 14px rgba(0,0,0,.08);
-    }
-    .organizer-profile-icon {
-        width: 48px;
-        height: 48px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 12px;
-        background: #eef2ff;
-        font-size: 28px;
-        flex: 0 0 auto;
-    }
-    .organizer-profile-name {
-        font-size: 21px;
-        font-weight: 900;
-    }
-    .organizer-profile-role {
-        margin-top: 2px;
-        color: #64748b;
-        font-size: 13px;
-        font-weight: 700;
-    }
-    .organizer-toolbar {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        align-items: center;
-        margin: 18px 0 14px;
-    }
-    .organizer-toolbar .btn-primary {
-        margin-right: auto;
-        font-weight: 800;
-    }
-    .organizer-sort-button.active {
-        background: #1f2937;
-        color: #fff;
-    }
-    .organizer-tasks {
-        display: grid;
-        gap: 12px;
-    }
-    .organizer-task-card {
-        background: #fff;
-        border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        padding: 15px;
-        box-shadow: 0 2px 8px rgba(0,0,0,.05);
-    }
-    .organizer-task-title {
-        font-size: 18px;
-        font-weight: 900;
-        line-height: 1.35;
-    }
-    .organizer-task-meta {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-top: 9px;
-    }
-    .organizer-task-tag {
-        display: inline-flex;
-        align-items: center;
-        padding: 5px 9px;
-        border-radius: 999px;
-        background: #f3f4f6;
-        color: #374151;
-        font-size: 12px;
-        font-weight: 800;
-    }
-    .organizer-task-notes {
-        margin-top: 10px;
-        color: #4b5563;
-        white-space: pre-wrap;
-        line-height: 1.5;
-    }
-    .organizer-task-date {
-        margin-top: 9px;
-        color: #9ca3af;
-        font-size: 12px;
-    }
-    @media (max-width: 650px) {
-        .organizer-toolbar {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-        }
-        .organizer-toolbar .btn-primary {
-            grid-column: 1 / -1;
-            margin-right: 0;
-        }
-        .organizer-toolbar .organizer-sort-button {
-            width: 100%;
-        }
-    }
-
 </style>
 </head>
 
@@ -1424,62 +1309,7 @@
     <div class="sanechka-readonly-note">«Обслуживание» — только просмотр. Редактирование и удаление недоступны.</div>
 </div>
 
-    
-<div id="organizerPortal" class="organizer-portal">
-    <div class="organizer-profile">
-        <div class="organizer-profile-icon" aria-hidden="true">📚</div>
-        <div>
-            <div class="organizer-profile-name">Органайзер</div>
-            <div class="organizer-profile-role">Задачи и ученики</div>
-        </div>
-    </div>
-
-    <div class="organizer-toolbar">
-        <button class="btn-primary" onclick="openOrganizerTaskModal()">＋ Добавить задачу</button>
-        <button id="organizerSortStudent" class="btn-secondary organizer-sort-button active" onclick="setOrganizerSort('student')">👤 По имени ученика</button>
-        <button id="organizerSortClass" class="btn-secondary organizer-sort-button" onclick="setOrganizerSort('class')">🏫 По классу</button>
-    </div>
-
-    <div id="organizerTasksStatus" class="status" style="display:none;"></div>
-    <div id="organizerTasksList" class="organizer-tasks"></div>
-</div>
-
-<div id="organizerTaskModalBg" class="modal-bg">
-    <div class="modal" style="max-width:620px;">
-        <div class="modal-header">
-            <h2 id="organizerTaskModalTitle">Новая задача</h2>
-            <button class="btn-secondary" onclick="closeOrganizerTaskModal()">✕</button>
-        </div>
-
-        <div class="field">
-            <label for="organizerTaskText">Задача</label>
-            <textarea id="organizerTaskText" placeholder="Что нужно сделать?"></textarea>
-        </div>
-
-        <div class="grid-2">
-            <div class="field">
-                <label for="organizerStudentName">Имя ученика</label>
-                <input id="organizerStudentName" type="text" placeholder="Например, Иван Иванов">
-            </div>
-            <div class="field">
-                <label for="organizerClassName">Класс</label>
-                <input id="organizerClassName" type="text" placeholder="Например, 5А">
-            </div>
-        </div>
-
-        <div class="field">
-            <label for="organizerTaskNotes">Комментарий</label>
-            <textarea id="organizerTaskNotes" placeholder="Дополнительная информация (необязательно)"></textarea>
-        </div>
-
-        <div class="form-buttons">
-            <button class="btn-primary" onclick="saveOrganizerTask()">💾 Сохранить</button>
-            <button class="btn-secondary" onclick="closeOrganizerTaskModal()">Отмена</button>
-        </div>
-    </div>
-</div>
-
-<div id="developerMessagesModalBg" class="modal-bg">
+    <div id="developerMessagesModalBg" class="modal-bg">
         <div class="modal" style="max-width:900px;">
             <div class="modal-header">
                 <div><h2>💬 Сообщения</h2><div id="developerMessagesSubtitle" style="color:#64748b;font-size:13px;"></div></div>
@@ -2964,12 +2794,6 @@ async function login(event) {
             return;
         }
 
-        if (isMamaAccount()) {
-            await loadData();
-            await checkForProgramUpdate(false);
-            return;
-        }
-
         await loadData();
         applyUserInterfaceMode();
         await startRealtimeSync();
@@ -3468,11 +3292,6 @@ function allowedCurrency(
 
 async function loadData() {
 
-    if (isMamaAccount()) {
-        await loadOrganizerTasks();
-        return;
-    }
-
     // Санечка не должен обращаться к clients/vehicles/services напрямую.
     // Его кабинет получает только назначенные арендные автомобили через
     // защищённые security-definer RPC.
@@ -3624,216 +3443,6 @@ async function loadSuggestions() {
 
 
 
-
-/* =====================================================
-   ОРГАНАЙЗЕР МАМЫ
-===================================================== */
-
-const MAMA_EMAIL = "gutfeeling3@gmail.com";
-
-let organizerTasks = [];
-let organizerSortMode = "student";
-
-function isMamaAccount() {
-    const currentEmail = String(
-        authSession &&
-        authSession.user &&
-        authSession.user.email || ""
-    ).trim().toLowerCase();
-
-    if (currentEmail === MAMA_EMAIL) {
-        return true;
-    }
-
-    try {
-        const stored = getStoredSession();
-        const storedEmail = String(
-            stored &&
-            stored.user &&
-            stored.user.email || ""
-        ).trim().toLowerCase();
-
-        return storedEmail === MAMA_EMAIL;
-    } catch (error) {
-        return false;
-    }
-}
-
-function setOrganizerStatus(message, error = false) {
-    const el = document.getElementById("organizerTasksStatus");
-    if (!el) return;
-
-    el.textContent = message || "";
-    el.className = error ? "status error" : "status";
-    el.style.display = message ? "block" : "none";
-}
-
-function setOrganizerSort(mode) {
-    organizerSortMode = mode === "class" ? "class" : "student";
-
-    document.getElementById("organizerSortStudent")?.classList.toggle(
-        "active",
-        organizerSortMode === "student"
-    );
-    document.getElementById("organizerSortClass")?.classList.toggle(
-        "active",
-        organizerSortMode === "class"
-    );
-
-    renderOrganizerTasks();
-}
-
-function sortOrganizerTasks(tasks) {
-    return [...tasks].sort((a, b) => {
-        const primaryA = String(
-            organizerSortMode === "class" ? a.class_name : a.student_name
-        ).trim();
-        const primaryB = String(
-            organizerSortMode === "class" ? b.class_name : b.student_name
-        ).trim();
-
-        const primaryCompare = primaryA.localeCompare(primaryB, "ru", {
-            numeric: true,
-            sensitivity: "base"
-        });
-
-        if (primaryCompare !== 0) return primaryCompare;
-
-        const secondaryA = String(
-            organizerSortMode === "class" ? a.student_name : a.class_name
-        ).trim();
-        const secondaryB = String(
-            organizerSortMode === "class" ? b.student_name : b.class_name
-        ).trim();
-
-        const secondaryCompare = secondaryA.localeCompare(secondaryB, "ru", {
-            numeric: true,
-            sensitivity: "base"
-        });
-
-        if (secondaryCompare !== 0) return secondaryCompare;
-
-        return String(a.created_at || "").localeCompare(String(b.created_at || ""));
-    });
-}
-
-function renderOrganizerTasks() {
-    const list = document.getElementById("organizerTasksList");
-    if (!list) return;
-
-    if (!organizerTasks.length) {
-        list.innerHTML = '<div class="empty">Задач пока нет. Нажмите «Добавить задачу».</div>';
-        return;
-    }
-
-    const sorted = sortOrganizerTasks(organizerTasks);
-
-    list.innerHTML = sorted.map(task => {
-        const student = task.student_name || "Ученик не указан";
-        const className = task.class_name || "Класс не указан";
-        const notes = task.notes
-            ? '<div class="organizer-task-notes">' + escapeHtml(task.notes) + '</div>'
-            : "";
-        const date = task.created_at
-            ? new Date(task.created_at).toLocaleString("ru-RU", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit"
-            })
-            : "";
-
-        return '<div class="organizer-task-card">' +
-            '<div class="organizer-task-title">' + escapeHtml(task.task) + '</div>' +
-            '<div class="organizer-task-meta">' +
-                '<span class="organizer-task-tag">👤 ' + escapeHtml(student) + '</span>' +
-                '<span class="organizer-task-tag">🏫 ' + escapeHtml(className) + '</span>' +
-            '</div>' +
-            notes +
-            '<div class="organizer-task-date">Добавлено: ' + escapeHtml(date) + '</div>' +
-        '</div>';
-    }).join("");
-}
-
-async function loadOrganizerTasks() {
-    if (!isMamaAccount()) return;
-
-    try {
-        setOrganizerStatus("Загружаем задачи...");
-        const rows = await api(
-            "organizer_tasks?select=*&order=created_at.desc"
-        );
-
-        organizerTasks = Array.isArray(rows) ? rows : [];
-        setOrganizerStatus("");
-        renderOrganizerTasks();
-    } catch (error) {
-        console.error("Ошибка загрузки задач органайзера:", error);
-        organizerTasks = [];
-        renderOrganizerTasks();
-        setOrganizerStatus("Не удалось загрузить задачи: " + error.message, true);
-    }
-}
-
-function openOrganizerTaskModal() {
-    document.getElementById("organizerTaskText").value = "";
-    document.getElementById("organizerStudentName").value = "";
-    document.getElementById("organizerClassName").value = "";
-    document.getElementById("organizerTaskNotes").value = "";
-    document.getElementById("organizerTaskModalBg").style.display = "block";
-    setTimeout(() => document.getElementById("organizerTaskText")?.focus(), 50);
-}
-
-function closeOrganizerTaskModal() {
-    const bg = document.getElementById("organizerTaskModalBg");
-    if (bg) bg.style.display = "none";
-}
-
-async function saveOrganizerTask() {
-    const task = document.getElementById("organizerTaskText").value.trim();
-    const studentName = document.getElementById("organizerStudentName").value.trim();
-    const className = document.getElementById("organizerClassName").value.trim();
-    const notes = document.getElementById("organizerTaskNotes").value.trim();
-
-    if (!task) {
-        alert("Введите задачу.");
-        return;
-    }
-
-    if (!studentName) {
-        alert("Введите имя ученика.");
-        return;
-    }
-
-    if (!className) {
-        alert("Введите класс.");
-        return;
-    }
-
-    try {
-        await api("organizer_tasks", {
-            method: "POST",
-            headers: {
-                "Prefer": "return=representation"
-            },
-            body: JSON.stringify({
-                task,
-                student_name: studentName,
-                class_name: className,
-                notes
-            })
-        });
-
-        closeOrganizerTaskModal();
-        await loadOrganizerTasks();
-    } catch (error) {
-        console.error("Ошибка сохранения задачи органайзера:", error);
-        alert("Не удалось сохранить задачу:\n\n" + error.message);
-    }
-}
-
-
 const SANECHKA_EMAIL = "michnin.aleksandr.1@gmail.com";
 
 function isSanechkaAccount() {
@@ -3872,20 +3481,14 @@ function isSanechkaAccount() {
 
 function applyUserInterfaceMode() {
     const sanechka = isSanechkaAccount();
-    const mama = isMamaAccount();
     const mainContainer = document.querySelector("body > .container");
     const portal = document.getElementById("sanechkaPortal");
-    const organizerPortal = document.getElementById("organizerPortal");
     const headerTitle = document.querySelector("header > span:first-child");
 
-    if (mainContainer) mainContainer.style.display = (sanechka || mama) ? "none" : "";
+    if (mainContainer) mainContainer.style.display = sanechka ? "none" : "";
     if (portal) portal.classList.toggle("visible", sanechka);
-    if (organizerPortal) organizerPortal.classList.toggle("visible", mama);
     if (headerTitle) {
-        headerTitle.textContent =
-            mama
-                ? "📚 Органайзер"
-                : (sanechka ? "🚗 СТО — кабинет" : "🚗 СТО — сервисная база");
+        headerTitle.textContent = sanechka ? "🚗 СТО — кабинет" : "🚗 СТО — сервисная база";
     }
 
     const extraWindows = [
@@ -3897,8 +3500,7 @@ function applyUserInterfaceMode() {
         "addVehicleModalBg",
         "serviceModalBg",
         "vehicleModalBg",
-        "sanechkaServiceModalBg",
-        "organizerTaskModalBg"
+        "sanechkaServiceModalBg"
     ];
 
     updateDeveloperMessagesButton(0);
@@ -9380,19 +8982,6 @@ async function runStartup() {
         return;
     }
 
-    if (isMamaAccount()) {
-        applyUserInterfaceMode();
-        showAuth(false);
-
-        const refreshedMama = await refreshAuthSession();
-        if (refreshedMama || authSession) {
-            await loadOrganizerTasks();
-        }
-
-        checkForProgramUpdate(false);
-        return;
-    }
-
     const refreshed = await refreshAuthSession();
 
     if (!refreshed && !authSession) {
@@ -10204,8 +9793,7 @@ const STO_MODAL_HISTORY_IDS = [
     "backupBg",
     "versionCheckBg",
     "kickSceneBg",
-    "developerMessagesModalBg",
-    "organizerTaskModalBg"
+    "developerMessagesModalBg"
 ];
 
 let stoModalHistoryStack = [];
@@ -10273,8 +9861,7 @@ function closeStoModalById(modalId) {
         serviceModalBg: "closeServiceModal",
         backupBg: "closeBackupModal",
         versionCheckBg: "closeVersionCheck",
-        developerMessagesModalBg: "closeDeveloperMessages",
-        organizerTaskModalBg: "closeOrganizerTaskModal"
+        developerMessagesModalBg: "closeDeveloperMessages"
     };
 
     const closeName = closeById[modalId];
