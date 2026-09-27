@@ -5309,6 +5309,7 @@ function renderService(
 
     const totals = {};
     const readOnly = isSanechkaAccount();
+    const workSummaryItem = items.find(item => item.name === "__SERVICE_WORK_SUMMARY__");
 
 
     items.forEach(item => {
@@ -5560,6 +5561,8 @@ function renderService(
                     🔧 Работы
                 </div>
 
+
+                ${workSummaryItem && Number(workSummaryItem.total_price) > 0 ? '<div class="line-row"><div>Работы одной суммой</div><div>1 шт.</div><div>' + Number(workSummaryItem.total_price).toFixed(2) + '</div><div>' + escapeHtml(workSummaryItem.currency || "BYN") + '</div></div>' : ""}
 
                 ${
                     items.filter(item => item.name !== "__SERVICE_WORK_SUMMARY__").length
