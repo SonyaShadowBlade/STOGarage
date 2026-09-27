@@ -593,7 +593,7 @@
     }
 
     .line-row.parts {
-        grid-template-columns: minmax(180px, 1fr) 140px 130px 150px 110px 110px 120px 120px 120px 40px;
+        grid-template-columns: minmax(180px, 1fr) 140px 130px 130px 150px 110px 110px 120px 120px 120px 40px;
     }
 
     .line-summary-row {
@@ -5691,6 +5691,9 @@ function renderService(
                                 <div>
                                     ${escapeHtml(part.part_number || "")}
                                 </div>
+                                <div>
+                                    ${escapeHtml(part.part_detail_number || "")}
+                                </div>
 
 
                                 <div>
@@ -6086,6 +6089,7 @@ function addPartRow(
     name = "",
     brand = "",
     partNumber = "",
+    partDetailNumber = "",
     supplier = "",
     quantity = 1,
     price = "",
@@ -6154,6 +6158,14 @@ function addPartRow(
             placeholder="Поставщик"
             value="${escapeAttr(supplier)}"
         >
+
+        <input
+            type="text"
+            class="part-detail-number"
+            placeholder="Номер детали"
+            value="${escapeAttr(partDetailNumber)}"
+        >
+
 
 
 
@@ -6815,6 +6827,14 @@ async function saveService() {
                     .value
                     .trim();
 
+            const partDetailNumber =
+                row
+                    .querySelector(
+                        ".part-detail-number"
+                    )
+                    .value
+                    .trim();
+
             const supplier =
                 row
                     .querySelector(
@@ -6876,6 +6896,9 @@ async function saveService() {
 
                             part_number:
                                 partNumber,
+
+                            part_detail_number:
+                                partDetailNumber,
 
                             supplier:
                                 supplier,
@@ -7192,6 +7215,9 @@ async function editService(
                 part.part_number ||
                     "",
 
+                part.part_detail_number ||
+                    "",
+
                 part.supplier ||
                     "",
 
@@ -7500,6 +7526,14 @@ async function updateExistingService(
                     .value
                     .trim();
 
+            const partDetailNumber =
+                row
+                    .querySelector(
+                        ".part-detail-number"
+                    )
+                    .value
+                    .trim();
+
             const supplier =
                 row
                     .querySelector(
@@ -7561,6 +7595,9 @@ async function updateExistingService(
 
                             part_number:
                                 partNumber,
+
+                            part_detail_number:
+                                partDetailNumber,
 
                             supplier:
                                 supplier,
@@ -7857,6 +7894,10 @@ function openQuickLineDialog(
                         <input id="quickLinePartNumber" type="text">
                     </div>
                     <div class="field">
+                        <label>Номер детали</label>
+                        <input id="quickLinePartDetailNumber" type="text">
+                    </div>
+                    <div class="field">
                         <label>Поставщик</label>
                         <input id="quickLineSupplier" type="text">
                     </div>
@@ -8067,6 +8108,17 @@ function openQuickLineDialog(
                             )
                             .trim();
 
+                        result.partDetailNumber =
+                            (
+                                dialog
+                                    .querySelector(
+                                        "#quickLinePartDetailNumber"
+                                    )
+                                    .value ||
+                                ""
+                            )
+                            .trim();
+
                         result.supplier =
                             (
                                 dialog
@@ -8239,6 +8291,9 @@ async function addPartToService(
 
                         part_number:
                             data.partNumber,
+
+                        part_detail_number:
+                            data.partDetailNumber,
 
                         supplier:
                             data.supplier,
