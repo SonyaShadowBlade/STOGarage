@@ -2115,7 +2115,7 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.23";
+const APP_VERSION = "0.3.24";
 
 function showVersionCheck(text, success = false) {
     const bg = document.getElementById("versionCheckBg");
@@ -5273,10 +5273,10 @@ async function loadServices() {
 
     container.innerHTML = html.join("");
 
-    const investmentAmount =
+    const investmentAmountDisplay =
         document.getElementById("vehicleInvestmentAmount");
 
-    if (investmentAmount) {
+    if (investmentAmountDisplay) {
         const currencyOrder = ["BYN", "EUR", "USD", "RUB"];
 
         const entries = currencyOrder
@@ -5290,7 +5290,7 @@ async function loadServices() {
                 currencySymbol(currency)
             );
 
-        investmentAmount.textContent =
+        investmentAmountDisplay.textContent =
             entries.length
                 ? entries
                     .map(entry => entry.replace(" Br", " BYN"))
