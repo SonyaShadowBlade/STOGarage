@@ -6018,9 +6018,9 @@ function addWorkRow(
             class="work-price"
             min="0"
             step="1"
-            placeholder="Цена за 1 шт."
-            value="${escapeAttr(price)}"
-            oninput="updateLineTotal(this); updateServiceFormTotal()"
+            placeholder="Цена за ед."
+            value="${Number(price) === 0 ? "" : escapeAttr(price)}"
+            oninput="if (this.value === '0') this.value = ''; updateLineTotal(this); updateServiceFormTotal()"
         >
 
         <input
@@ -6029,8 +6029,8 @@ function addWorkRow(
             min="0"
             step="1"
             placeholder="Общая стоимость"
-            value="${escapeAttr(totalPrice !== "" && totalPrice !== null ? totalPrice : (price !== "" && quantity ? Number(price) * Number(quantity) : ""))}"
-            oninput="updateLineTotal(this, true); updateServiceFormTotal()"
+            value="${Number(totalPrice !== "" && totalPrice !== null ? totalPrice : (price !== "" && quantity ? Number(price) * Number(quantity) : "")) === 0 ? "" : escapeAttr(totalPrice !== "" && totalPrice !== null ? totalPrice : (price !== "" && quantity ? Number(price) * Number(quantity) : ""))}"
+            oninput="if (this.value === '0') this.value = ''; updateLineTotal(this, true); updateServiceFormTotal()"
         >
 
 
@@ -6208,9 +6208,9 @@ function addPartRow(
             class="part-price"
             min="0"
             step="1"
-            placeholder="Цена за 1 шт."
-            value="${escapeAttr(price)}"
-            oninput="updateLineTotal(this)"
+            placeholder="Цена за ед."
+            value="${Number(price) === 0 ? "" : escapeAttr(price)}"
+            oninput="if (this.value === '0') this.value = ''; updateLineTotal(this)"
         >
 
         <input
@@ -6219,8 +6219,8 @@ function addPartRow(
             min="0"
             step="1"
             placeholder="Общая стоимость"
-            value="${escapeAttr(totalPrice !== "" && totalPrice !== null ? totalPrice : (price !== "" && quantity ? Number(price) * Number(quantity) : ""))}"
-            oninput="updateLineTotal(this, true)"
+            value="${Number(totalPrice !== "" && totalPrice !== null ? totalPrice : (price !== "" && quantity ? Number(price) * Number(quantity) : "")) === 0 ? "" : escapeAttr(totalPrice !== "" && totalPrice !== null ? totalPrice : (price !== "" && quantity ? Number(price) * Number(quantity) : ""))}"
+            oninput="if (this.value === '0') this.value = ''; updateLineTotal(this, true)"
         >
 
 
