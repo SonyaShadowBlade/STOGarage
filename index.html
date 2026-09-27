@@ -9024,6 +9024,13 @@ async function runStartup() {
     }
 
     authSession = stored;
+
+    // Показываем основной интерфейс сразу после обнаружения сохранённой
+    // сессии. Загрузка профиля/данных/Realtime выполняется ниже и не
+    // должна оставлять пользователя на пустом сером экране, если какой-то
+    // сетевой запрос задержался.
+    showAuth(false);
+    applyUserInterfaceMode();
     updateUserGreeting();
 
     // Если сохранён email Санечки — кабинет показываем сразу.
@@ -10114,12 +10121,33 @@ function initStoModalHistory() {
 
 initStoModalHistory();
 
-runStartup();
+runStartup().catch(error => {
+    console.error("Критическая ошибка запуска СТО:", error);
+    showAuth(true);
+    setStatus("Не удалось запустить СТО. Обновите страницу и попробуйте снова.", true);
+});
 
 setTimeout(() => {
     refreshDeveloperMessagesBadge();
     refreshDeveloperClientMessagesBadge();
 }, 1500);
+
+// Аварийная защита от пустого серого экрана:
+// если запуск завис/упал до выбора интерфейса, возвращаем окно входа.
+setTimeout(() => {
+    const authBg = document.getElementById("authBg");
+    const mainContainer = document.querySelector("body > .container");
+    const portal = document.getElementById("sanechkaPortal");
+
+    const authHidden = !authBg || getComputedStyle(authBg).display === "none";
+    const mainHidden = !mainContainer || getComputedStyle(mainContainer).display === "none";
+    const portalHidden = !portal || !portal.classList.contains("visible");
+
+    if (authHidden && mainHidden && portalHidden && !authSession) {
+        showAuth(true);
+        setStatus("Сессия не найдена. Выполните вход в СТО.");
+    }
+}, 6000);
 </script>
 </body>
 </html>
