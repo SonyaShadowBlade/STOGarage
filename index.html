@@ -604,7 +604,7 @@
     .line-row.paid-by-me .quantity-control input,
     .line-row.paid-by-me .work-total,
     .line-row.paid-by-me .part-total {
-        background: #ffdede !important;
+        background: #ffb8b8 !important;
     }
 
     .line-row.paid-by-client > input,
@@ -614,7 +614,7 @@
     .line-row.paid-by-client .quantity-control input,
     .line-row.paid-by-client .work-total,
     .line-row.paid-by-client .part-total {
-        background: #ddf7df !important;
+        background: #a8f0b2 !important;
     }
 
     .line-summary-row {
@@ -5909,7 +5909,7 @@ function renderService(
 
                             <div
                                 class="line-row"
-                                style="${item.paid_by === "Мной" ? "background:#ffdede;" : item.paid_by === "Клиентом" ? "background:#ddf7df;" : ""}"
+                                style="${item.paid_by === "Мной" ? "background:#ffb8b8;" : item.paid_by === "Клиентом" ? "background:#a8f0b2;" : ""}"
                             >
 
                                 <div style="font-weight:600;">
@@ -6015,7 +6015,7 @@ function renderService(
 
                             <div
                                 class="line-row parts"
-                                style="${part.paid_by === "Мной" ? "background:#ffdede;" : part.paid_by === "Клиентом" ? "background:#ddf7df;" : ""}"
+                                style="${part.paid_by === "Мной" ? "background:#ffb8b8;" : part.paid_by === "Клиентом" ? "background:#a8f0b2;" : ""}"
                             >
 
                                 <div style="font-weight:600;">
@@ -6716,9 +6716,9 @@ function applyPaidByRowStyle(row, selector) {
     }
 
     row.style.background = paidBy === "Мной"
-        ? "#ffdede"
+        ? "#ffb8b8"
         : paidBy === "Клиентом"
-            ? "#ddf7df"
+            ? "#a8f0b2"
             : "";
 }
 
