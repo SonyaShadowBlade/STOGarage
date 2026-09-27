@@ -6338,12 +6338,13 @@ async function saveServicePayment(){
         if(title)title.textContent="Внести средства";
         if(btn)btn.textContent="Внести средства";
 
-        await loadServices();
-
         if(wasEditing){
             closeServicePaymentModal();
+            await loadServices();
             return;
         }
+
+        await loadServices();
 
         renderServicePaymentHistory(
             await api("service_payments?service_id=eq."+encodeURIComponent(servicePaymentServiceId)+"&select=*&order=payment_date.desc,payment_time.desc,created_at.desc")
