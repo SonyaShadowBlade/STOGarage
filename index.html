@@ -2013,7 +2013,6 @@
 <div class="modal" style="max-width:520px;">
 <div class="modal-header"><h2>Внести средства</h2><button class="btn-secondary" onclick="closeServicePaymentModal()">✕</button></div>
 <div class="field"><label>Дата</label><input id="servicePaymentDate" type="date"></div>
-<div class="field"><label>Время</label><input id="servicePaymentTime" type="time"></div>
 <div class="field"><label>Сумма</label><input id="servicePaymentAmount" type="number" min="0.01" step="0.01" placeholder="Введите сумму"></div>
 <div id="servicePaymentHistory" style="margin-top:16px;"></div>
 <div class="form-buttons"><button id="servicePaymentSaveButton" class="btn-success" onclick="saveServicePayment()">Внести средства</button><button class="btn-secondary" onclick="closeServicePaymentModal()">Отмена</button></div>
@@ -6249,17 +6248,14 @@ function closeServiceModal() {
 let servicePaymentServiceId=null;
 let editingServicePaymentId=null;
 function localDateInputValue(){const now=new Date();return now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");}
-function localTimeInputValue(){const now=new Date();return String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");}
-async function openServicePaymentModal(serviceId){servicePaymentServiceId=serviceId;editingServicePaymentId=null;const d=document.getElementById("servicePaymentDate"),t=document.getElementById("servicePaymentTime"),a=document.getElementById("servicePaymentAmount"),h=document.getElementById("servicePaymentHistory");if(d)d.value=localDateInputValue();if(t)t.value=localTimeInputValue();if(a)a.value="";if(h)h.innerHTML="<div style=\"color:#777;\">Загрузка внесений...</div>";document.getElementById("servicePaymentModalBg").style.display="block";try{renderServicePaymentHistory(await api("service_payments?service_id=eq."+encodeURIComponent(serviceId)+"&select=*&order=payment_date.desc,created_at.desc"));}catch(e){console.error(e);if(h)h.innerHTML="<div class=\"status error\">Не удалось загрузить внесения: "+escapeHtml(e.message)+"</div>";}}
+async function openServicePaymentModal(serviceId){servicePaymentServiceId=serviceId;editingServicePaymentId=null;const d=document.getElementById("servicePaymentDate"),a=document.getElementById("servicePaymentAmount"),h=document.getElementById("servicePaymentHistory");if(d)d.value=localDateInputValue();if(a)a.value="";if(h)h.innerHTML="<div style=\"color:#777;\">Загрузка внесений...</div>";document.getElementById("servicePaymentModalBg").style.display="block";try{renderServicePaymentHistory(await api("service_payments?service_id=eq."+encodeURIComponent(serviceId)+"&select=*&order=payment_date.desc,created_at.desc"));}catch(e){console.error(e);if(h)h.innerHTML="<div class=\"status error\">Не удалось загрузить внесения: "+escapeHtml(e.message)+"</div>";}}
 function renderServicePaymentHistory(payments){const h=document.getElementById("servicePaymentHistory");if(!h)return;const rows=Array.isArray(payments)?payments:[],total=rows.reduce((s,p)=>s+(Number(p.amount)||0),0);h.innerHTML=rows.length?"<div style="font-weight:bold;margin-bottom:8px;">Внесённые средства</div>"+rows.map(p=>"<div class="service-payment-modal-row"><span>"+escapeHtml(p.payment_date||"")+"</span><strong>"+(Number(p.amount)||0).toFixed(2)+" BYN</strong></div>").join("")+"<div style="margin-top:10px;padding-top:10px;border-top:1px solid #eee;font-weight:900;">Всего внесено: "+total.toFixed(2)+" BYN</div>":"<div style="color:#777;">Средства ещё не вносились.</div>";}
 
 async function saveServicePayment(){
     if(!servicePaymentServiceId)return;
     const date=document.getElementById("servicePaymentDate").value;
-    const time=document.getElementById("servicePaymentTime").value;
     const amount=Number(document.getElementById("servicePaymentAmount").value);
     if(!date){alert("Выберите дату.");return;}
-    if(!time){alert("Выберите время.");return;}
     if(!Number.isFinite(amount)||amount<=0){alert("Введите сумму больше нуля.");return;}
     try{
         const endpoint=editingServicePaymentId
@@ -6268,12 +6264,11 @@ async function saveServicePayment(){
         await api(endpoint,{
             method:editingServicePaymentId?"PATCH":"POST",
             headers:{"Prefer":"return=minimal"},
-            body:JSON.stringify({service_id:servicePaymentServiceId,payment_date:date,payment_time:time,amount:amount})
+            body:JSON.stringify({service_id:servicePaymentServiceId,payment_date:date,amount:amount})
         });
         editingServicePaymentId=null;
         document.getElementById("servicePaymentAmount").value="";
         document.getElementById("servicePaymentDate").value=localDateInputValue();
-        document.getElementById("servicePaymentTime").value=localTimeInputValue();
         const btn=document.getElementById("servicePaymentSaveButton");
         if(btn)btn.textContent="Внести средства";
         renderServicePaymentHistory(await api("service_payments?service_id=eq."+encodeURIComponent(servicePaymentServiceId)+"&select=*&order=payment_date.desc,created_at.desc"));
