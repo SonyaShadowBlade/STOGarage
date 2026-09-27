@@ -6280,25 +6280,48 @@ function addPartRow(
 function updateLineTotal(input, manual = false) {
     const row = input.closest(".line-row");
     if (!row) return;
+
     const isPart = row.classList.contains("parts");
     const priceInput = row.querySelector(isPart ? ".part-price" : ".work-price");
     const quantityInput = row.querySelector(isPart ? ".part-quantity" : ".work-quantity");
     const totalInput = row.querySelector(isPart ? ".part-total" : ".work-total");
+
     if (!priceInput || !quantityInput || !totalInput) return;
-    const priceText = priceInput.value.trim();
+
     const quantity = Number(quantityInput.value || 0);
-    if (manual && priceText === "") {
+    const inputIsTotal = input === totalInput;
+
+    // Если пользователь вводит общую стоимость, автоматически
+    // рассчитываем среднюю цену за 1 штуку.
+    if (manual && inputIsTotal) {
+        const total = Number(totalInput.value);
+
+        if (Number.isFinite(total) && total >= 0 && Number.isFinite(quantity) && quantity > 0) {
+            priceInput.value = (total / quantity).toFixed(2);
+            totalInput.readOnly = false;
+            updateServiceFormTotal();
+            return;
+        }
+
+        priceInput.value = "";
         totalInput.readOnly = false;
+        updateServiceFormTotal();
         return;
     }
+
+    const priceText = priceInput.value.trim();
+
     if (priceText !== "" && Number.isFinite(quantity)) {
         const price = Number(priceText);
+
         if (Number.isFinite(price) && price >= 0) {
             totalInput.value = (price * quantity).toFixed(2);
-            totalInput.readOnly = true;
+            totalInput.readOnly = false;
+            updateServiceFormTotal();
             return;
         }
     }
+
     totalInput.readOnly = false;
     updateServiceFormTotal();
 }
