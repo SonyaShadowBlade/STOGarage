@@ -5047,6 +5047,14 @@ async function openVehicle(
 
     currentVehicle = vehicle;
 
+    // Сразу сбрасываем сумму предыдущего автомобиля,
+    // чтобы она не была видна, пока загружаются данные нового.
+    const vehicleInvestmentAmount =
+        document.getElementById("vehicleInvestmentAmount");
+    if (vehicleInvestmentAmount) {
+        vehicleInvestmentAmount.textContent = "0.00 BYN";
+    }
+
 
     const client =
         clients.find(
