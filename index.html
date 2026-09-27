@@ -1657,6 +1657,11 @@
                 </div>
 
                 <div class="field">
+                    <label>Маркировка двигателя</label>
+                    <input id="vehicleEngineMarking">
+                </div>
+
+                <div class="field">
                     <label>Текущий пробег</label>
                     <input id="vehicleMileage" type="number">
                 </div>
@@ -1748,6 +1753,11 @@
             </div>
 
             <div class="field">
+                <label>Маркировка двигателя</label>
+                <input id="addVehicleEngineMarking">
+            </div>
+
+            <div class="field">
                 <label>Текущий пробег</label>
                 <input id="addVehicleMileage" type="number">
             </div>
@@ -1823,6 +1833,11 @@
             <div class="field">
                 <label>Двигатель</label>
                 <input id="editVehicleEngine">
+            </div>
+
+            <div class="field">
+                <label>Маркировка двигателя</label>
+                <input id="editVehicleEngineMarking">
             </div>
 
             <div class="field">
@@ -4458,6 +4473,22 @@ function renderVehicle(
                     : ""
                 }
 
+                ${
+                    vehicle.engine_marking
+
+                    ?
+
+                    `
+                        Маркировка двигателя:
+                        ${escapeHtml(
+                            vehicle.engine_marking
+                        )}
+                        <br>
+                    `
+
+                    : ""
+                }
+
 
                 ${
                     vehicle.current_mileage != null
@@ -4567,6 +4598,7 @@ async function saveAdditionalVehicle() {
                     model: model,
                     year: year,
                     engine: engine,
+                    engine_marking: document.getElementById("addVehicleEngineMarking").value.trim(),
                     current_mileage: mileage
                 })
             }
@@ -4602,6 +4634,7 @@ function openEditVehicleModal(vehicleId) {
     document.getElementById("editVehicleVin").value = vehicle.vin || "";
     document.getElementById("editVehicleYear").value = vehicle.year || "";
     document.getElementById("editVehicleEngine").value = vehicle.engine || "";
+    document.getElementById("editVehicleEngineMarking").value = vehicle.engine_marking || "";
     document.getElementById("editVehicleMileage").value = vehicle.current_mileage ?? "";
 
     document.getElementById("editVehicleModalBg").style.display = "block";
@@ -4623,6 +4656,7 @@ async function saveEditedVehicle() {
             model: document.getElementById("editVehicleModel").value.trim(),
             year: parseInteger(document.getElementById("editVehicleYear").value),
             engine: document.getElementById("editVehicleEngine").value.trim(),
+            engine_marking: document.getElementById("editVehicleEngineMarking").value.trim(),
             current_mileage: parseInteger(document.getElementById("editVehicleMileage").value)
         };
 
@@ -4784,6 +4818,7 @@ function openEditClientModal(id) {
                 vehicle.vin ? "VIN: " + escapeHtml(vehicle.vin) : "",
                 vehicle.year ? "Год: " + escapeHtml(String(vehicle.year)) : "",
                 vehicle.engine ? "Двигатель: " + escapeHtml(vehicle.engine) : "",
+                vehicle.engine_marking ? "Маркировка двигателя: " + escapeHtml(vehicle.engine_marking) : "",
                 vehicle.current_mileage != null ? "Пробег: " + escapeHtml(String(vehicle.current_mileage)) : ""
             ].filter(Boolean);
 
@@ -4889,6 +4924,7 @@ async function saveClient() {
                         model: model,
                         year: parseInteger(document.getElementById("vehicleYear").value),
                         engine: document.getElementById("vehicleEngine").value.trim(),
+                        engine_marking: document.getElementById("vehicleEngineMarking").value.trim(),
                         current_mileage: parseInteger(document.getElementById("vehicleMileage").value)
                     })
                 }
