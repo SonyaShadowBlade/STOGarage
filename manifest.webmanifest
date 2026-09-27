@@ -1,7 +1,7 @@
 {
   "name": "СТОGarage",
   "short_name": "СТОGarage",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#f3f5f7",
   "theme_color": "#2563eb",
