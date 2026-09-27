@@ -6327,6 +6327,7 @@ async function saveServicePayment(){
             })
         });
 
+        const wasEditing=!!editingServicePaymentId;
         editingServicePaymentId=null;
         document.getElementById("servicePaymentAmount").value="";
         document.getElementById("servicePaymentDate").value=localDateInputValue();
@@ -6337,10 +6338,16 @@ async function saveServicePayment(){
         if(title)title.textContent="Внести средства";
         if(btn)btn.textContent="Внести средства";
 
+        await loadServices();
+
+        if(wasEditing){
+            closeServicePaymentModal();
+            return;
+        }
+
         renderServicePaymentHistory(
             await api("service_payments?service_id=eq."+encodeURIComponent(servicePaymentServiceId)+"&select=*&order=payment_date.desc,payment_time.desc,created_at.desc")
         );
-        await loadServices();
     }catch(e){
         console.error(e);
         alert("Ошибка сохранения внесения:\n\n"+e.message);
