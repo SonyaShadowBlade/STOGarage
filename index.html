@@ -6249,7 +6249,8 @@ let servicePaymentServiceId=null;
 let editingServicePaymentId=null;
 function localDateInputValue(){const now=new Date();return now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");}
 async function openServicePaymentModal(serviceId){servicePaymentServiceId=serviceId;editingServicePaymentId=null;const d=document.getElementById("servicePaymentDate"),a=document.getElementById("servicePaymentAmount"),h=document.getElementById("servicePaymentHistory");if(d)d.value=localDateInputValue();if(a)a.value="";if(h)h.innerHTML="<div style=\"color:#777;\">Загрузка внесений...</div>";document.getElementById("servicePaymentModalBg").style.display="block";try{renderServicePaymentHistory(await api("service_payments?service_id=eq."+encodeURIComponent(serviceId)+"&select=*&order=payment_date.desc,created_at.desc"));}catch(e){console.error(e);if(h)h.innerHTML="<div class=\"status error\">Не удалось загрузить внесения: "+escapeHtml(e.message)+"</div>";}}
-function renderServicePaymentHistory(payments){const h=document.getElementById("servicePaymentHistory");if(!h)return;const rows=Array.isArray(payments)?payments:[],total=rows.reduce((s,p)=>s+(Number(p.amount)||0),0);h.innerHTML=rows.length?"<div style=\"font-weight:bold;margin-bottom:8px;\">Внесённые средства</div>"+rows.map(p=>"<div class=\"service-payment-modal-row\"><span>"+escapeHtml(p.payment_date||"")+"</span><strong>"+(Number(p.amount)||0).toFixed(2)+" BYN</strong></div>").join("")+"<div style=\"margin-top:10px;padding-top:10px;border-top:1px solid #eee;font-weight:900;\">Всего внесено: "+total.toFixed(2)+" BYN</div>":"<div style=\"color:#777;\">Средства ещё не вносились.</div>";}
+function renderServicePaymentHistory(payments){const h=document.getElementById("servicePaymentHistory");if(!h)return;const rows=Array.isArray(payments)?payments:[],total=rows.reduce((s,p)=>s+(Number(p.amount)||0),0);h.innerHTML=rows.length?"<div style=\"font-weight:bold;margin-bottom:8px;\">Внесённые средства</div>"+rows.map(p=>"<div class=\"service-payment-modal-row\"><span>"+escapeHtml(p.payment_date||"")+"</span><strong>"+(Number(p.amount)||0).toFixed(2)+" BYN</strong><button class=\"btn-primary small-button\" onclick=\"editServicePayment('"+p.id+"')\">Изменить</button><button class=\"btn-danger small-button\" onclick=\"deleteServicePayment('"+p.id+"')\">Удалить</button></div>").join("")+"<div style=\"margin-top:10px;padding-top:10px;border-top:1px solid #eee;font-weight:900;\">Всего внесено: "+total.toFixed(2)+" BYN</div>":"<div style=\"color:#777;\">Средства ещё не вносились.</div>";}
+
 async function saveServicePayment(){
     if(!servicePaymentServiceId)return;
     const date=document.getElementById("servicePaymentDate").value;
@@ -6290,6 +6291,8 @@ async function editServicePayment(paymentId){
     }catch(e){console.error(e);alert("Ошибка загрузки внесения:\n\n"+e.message);}
 }
 
+
+async function deleteServicePayment(paymentId){if(!paymentId)return;if(!confirm("Удалить это внесение средств?"))return;try{await api("service_payments?id=eq."+encodeURIComponent(paymentId),{method:"DELETE",headers:{"Prefer":"return=minimal"}});if(editingServicePaymentId===paymentId)editingServicePaymentId=null;openServicePaymentModal(servicePaymentServiceId);}catch(e){console.error(e);alert("Ошибка удаления внесения:\n\n"+e.message);}}
 
 function closeServicePaymentModal(){const bg=document.getElementById("servicePaymentModalBg");if(bg)bg.style.display="none";servicePaymentServiceId=null;editingServicePaymentId=null;const btn=document.getElementById("servicePaymentSaveButton");if(btn)btn.textContent="Внести средства";}
 /* =====================================================
