@@ -5863,7 +5863,7 @@ function renderService(
 
             <div class="service-balance-box">
                 <div class="service-balance-row"><span>Баланс</span><strong>${payments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0).toFixed(2)} BYN</strong></div>
-                ${payments.length ? `<div class="service-payments-list">${payments.map(payment => `<div class="service-payment-row"><span>${escapeHtml(payment.payment_date || "")}</span><span>${(Number(payment.amount) || 0).toFixed(2)} BYN</span></div>`).join("")}</div>` : ""}
+                ${payments.length ? `<div class="service-payments-list">${payments.map(payment => `<div class="service-payment-row"><span>${escapeHtml(payment.payment_date || "")}</span><span style="display:flex;align-items:center;gap:6px;"><button class="btn-primary small-button" onclick="event.stopPropagation();editServicePayment(&quot;${payment.id}&quot;)">Изменить</button><button class="btn-danger small-button" onclick="event.stopPropagation();deleteServicePayment(&quot;${payment.id}&quot;)">Удалить</button><span>${(Number(payment.amount) || 0).toFixed(2)} BYN</span></span></div>`).join("")}</div>` : ""}
                 ${readOnly ? "" : `<button class="btn-success small-button" style="margin-top:8px;" onclick="openServicePaymentModal(&quot;${service.id}&quot;)">＋ Внести средства</button>`}
             </div>
 
@@ -6290,6 +6290,8 @@ async function editServicePayment(paymentId){
     }catch(e){console.error(e);alert("Ошибка загрузки внесения:\n\n"+e.message);}
 }
 
+
+async function deleteServicePayment(paymentId){if(!paymentId)return;if(!confirm("Удалить это внесение средств?"))return;try{await api("service_payments?id=eq."+encodeURIComponent(paymentId),{method:"DELETE",headers:{"Prefer":"return=minimal"}});if(editingServicePaymentId===paymentId)editingServicePaymentId=null;await loadServices();if(servicePaymentServiceId)renderServicePaymentHistory(await api("service_payments?service_id=eq."+encodeURIComponent(servicePaymentServiceId)+"&select=*&order=payment_date.desc,created_at.desc"));}catch(e){console.error(e);alert("Ошибка удаления внесения:\n\n"+e.message);}}
 
 function closeServicePaymentModal(){const bg=document.getElementById("servicePaymentModalBg");if(bg)bg.style.display="none";servicePaymentServiceId=null;editingServicePaymentId=null;const btn=document.getElementById("servicePaymentSaveButton");if(btn)btn.textContent="Внести средства";}
 /* =====================================================
