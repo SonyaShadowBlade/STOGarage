@@ -5187,6 +5187,9 @@ async function loadServices() {
     const container =
         document.getElementById("servicesList");
 
+    const investmentAmount = document.getElementById("vehicleInvestmentAmount");
+    if (investmentAmount) investmentAmount.textContent = "0.00 BYN";
+
     if (!services.length) {
         container.innerHTML =
             `
