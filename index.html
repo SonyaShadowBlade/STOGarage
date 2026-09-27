@@ -594,7 +594,27 @@
     }
 
     .line-row.parts {
-        grid-template-columns: minmax(180px, 1fr) 140px 130px 130px 150px 110px 110px 120px 120px 120px 40px;
+        grid-template-columns: minmax(180px, 1fr) 140px 130px 130px 150px 110px 110px 120px 120px 120px 120px 40px;
+    }
+
+    .line-row.paid-by-me > input,
+    .line-row.paid-by-me > select,
+    .line-row.paid-by-me .autocomplete-wrap > input,
+    .line-row.paid-by-me .quantity-control,
+    .line-row.paid-by-me .quantity-control input,
+    .line-row.paid-by-me .work-total,
+    .line-row.paid-by-me .part-total {
+        background: #ffdede !important;
+    }
+
+    .line-row.paid-by-client > input,
+    .line-row.paid-by-client > select,
+    .line-row.paid-by-client .autocomplete-wrap > input,
+    .line-row.paid-by-client .quantity-control,
+    .line-row.paid-by-client .quantity-control input,
+    .line-row.paid-by-client .work-total,
+    .line-row.paid-by-client .part-total {
+        background: #ddf7df !important;
     }
 
     .line-summary-row {
@@ -6468,7 +6488,7 @@ function addWorkRow(
     row.innerHTML = `
 
         <select class="work-paid-by" style="min-width:125px;">
-            <option value="">Кем оплачено</option>
+            <option value="" disabled hidden ${paidBy ? "" : "selected"}>Кем оплачено</option>
             <option value="Мной" ${paidBy === "Мной" ? "selected" : ""}>Мной</option>
             <option value="Клиентом" ${paidBy === "Клиентом" ? "selected" : ""}>Клиентом</option>
         </select>
@@ -6625,7 +6645,7 @@ function addPartRow(
 
     row.innerHTML = `
         <select class="part-paid-by" style="min-width:125px;">
-            <option value="">Кем оплачено</option>
+            <option value="" disabled hidden ${paidBy ? "" : "selected"}>Кем оплачено</option>
             <option value="Мной" ${paidBy === "Мной" ? "selected" : ""}>Мной</option>
             <option value="Клиентом" ${paidBy === "Клиентом" ? "selected" : ""}>Клиентом</option>
         </select>
@@ -6681,9 +6701,20 @@ function addPartRow(
     );
 }
 
-function updatePartPaidByStyle(row) {
+function applyPaidByRowStyle(row, selector) {
     if (!row) return;
-    const paidBy = row.querySelector(".part-paid-by")?.value || "";
+
+    const select = row.querySelector(selector);
+    const paidBy = select?.value || "";
+
+    row.classList.remove("paid-by-me", "paid-by-client");
+
+    if (paidBy === "Мной") {
+        row.classList.add("paid-by-me");
+    } else if (paidBy === "Клиентом") {
+        row.classList.add("paid-by-client");
+    }
+
     row.style.background = paidBy === "Мной"
         ? "#ffdede"
         : paidBy === "Клиентом"
@@ -6691,15 +6722,12 @@ function updatePartPaidByStyle(row) {
             : "";
 }
 
+function updatePartPaidByStyle(row) {
+    applyPaidByRowStyle(row, ".part-paid-by");
+}
+
 function updatePaidByStyle(row) {
-    if (!row) return;
-    const select = row.querySelector(".work-paid-by");
-    const paidBy = select?.value || "";
-    row.style.background = paidBy === "Мной"
-        ? "#ffdede"
-        : paidBy === "Клиентом"
-            ? "#ddf7df"
-            : "";
+    applyPaidByRowStyle(row, ".work-paid-by");
 }
 /* =====================================================
    ОБЩАЯ СТОИМОСТЬ
