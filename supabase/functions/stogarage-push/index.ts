@@ -5,12 +5,26 @@ import { sendNotification } from "npm:web-push-neo@0.1.2";
 const VAPID_PUBLIC_KEY = "BE2jGs15xBtOr36VHiHeYoA8y-uQ7ypcNf3tM5qgnUfuUt2X0cDMyauwqErHGSlPp3Q89CIM3SsxffkmnMAY9-U";
 const VAPID_SUBJECT = "mailto:stogarage@example.com";
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
 const admin = createClient(supabaseUrl, serviceRoleKey);
 
 function authorized(req: Request) {
-  return req.headers.get("authorization") === "Bearer " + serviceRoleKey;
+  const candidates = new Set<string>();
+  if (serviceRoleKey) candidates.add(serviceRoleKey);
+
+  try {
+    const secretKeys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}");
+    for (const value of Object.values(secretKeys)) {
+      if (typeof value === "string" && value) candidates.add(value);
+    }
+  } catch {}
+
+  const authorization = req.headers.get("authorization") || "";
+  const bearer = authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
+  const apiKey = (req.headers.get("apikey") || "").trim();
+
+  return candidates.has(bearer) || candidates.has(apiKey);
 }
 
 async function recipientIds(payload: any): Promise<string[]> {
