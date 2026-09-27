@@ -5990,7 +5990,12 @@ function renderService(
 
                             <div
                                 class="line-row parts"
+                                style="${part.paid_by === "Мной" ? "background:#ffdede;" : part.paid_by === "Клиентом" ? "background:#ddf7df;" : ""}"
                             >
+
+                                <div style="font-weight:600;">
+                                    ${escapeHtml(part.paid_by || "")}
+                                </div>
 
                                 <div>
                                     ${escapeHtml(
@@ -6595,182 +6600,81 @@ function addPartRow(
     quantity = 1,
     price = "",
     totalPrice = "",
-    currency = "BYN"
+    currency = "BYN",
+    paidBy = ""
 ) {
 
-    const container =
-        document.getElementById(
-            "partsContainer"
-        );
-
-
-    const row =
-        document.createElement(
-            "div"
-        );
-
-
-    row.className =
-        "line-row parts";
-
+    const container = document.getElementById("partsContainer");
+    const row = document.createElement("div");
+    row.className = "line-row parts";
 
     row.innerHTML = `
-
-        <div class="autocomplete-wrap">
-
-            <input
-                type="text"
-                class="part-name"
-                placeholder="Запчасть"
-                value="${escapeAttr(
-                    name
-                )}"
-                autocomplete="off"
-            >
-
-
-            <div
-                class="autocomplete-list"
-            ></div>
-
-        </div>
-
-
-        <input
-            type="text"
-            class="part-brand"
-            placeholder="Бренд"
-            value="${escapeAttr(
-                brand
-            )}"
-        >
-
-        <input
-            type="text"
-            class="part-number"
-            placeholder="Part №"
-            value="${escapeAttr(partNumber)}"
-        >
-
-        <input
-            type="text"
-            class="part-detail-number"
-            placeholder="Номер детали"
-            value="${escapeAttr(partDetailNumber)}"
-        >
-
-        <input
-            type="text"
-            class="part-supplier"
-            placeholder="Поставщик"
-            value="${escapeAttr(supplier)}"
-        >
-
-        <div class="quantity-control">
-
-            <button
-                type="button"
-                onclick="changeQuantity(
-                    this,
-                    -1
-                )"
-            >
-                −
-            </button>
-
-
-            <input
-                type="number"
-                class="part-quantity"
-                min="1"
-                step="1"
-                value="${quantity}"
-            >
-
-
-            <button
-                type="button"
-                onclick="changeQuantity(
-                    this,
-                    1
-                )"
-            >
-                ＋
-            </button>
-
-        </div>
-
-
-        <input
-            type="number"
-            class="part-price"
-            min="0"
-            step="1"
-            placeholder="Цена за 1 шт."
-            value="${escapeAttr(price)}"
-            oninput="updateLineTotal(this)"
-        >
-
-        <input
-            type="number"
-            class="part-total"
-            min="0"
-            step="1"
-            placeholder="Общая стоимость"
-            value="${escapeAttr(totalPrice !== "" && totalPrice !== null ? totalPrice : (price !== "" && quantity ? Number(price) * Number(quantity) : ""))}"
-            oninput="updateLineTotal(this, true)"
-        >
-
-
-        <select
-            class="part-currency"
-        >
-            ${currencyOptions(
-                currency
-            )}
+        <select class="part-paid-by" style="min-width:125px;">
+            <option value="">Кем оплачено</option>
+            <option value="Мной" ${paidBy === "Мной" ? "selected" : ""}>Мной</option>
+            <option value="Клиентом" ${paidBy === "Клиентом" ? "selected" : ""}>Клиентом</option>
         </select>
 
+        <div class="autocomplete-wrap">
+            <input type="text" class="part-name" placeholder="Запчасть" value="${escapeAttr(name)}" autocomplete="off">
+            <div class="autocomplete-list"></div>
+        </div>
 
-        <button
-            type="button"
-            class="btn-danger small-button"
-            style="width:34px;min-width:34px;padding:6px 8px;"
-            onclick="
-                this.closest('.line-row').remove();
-                updateServiceFormTotal()
-            "
-        >
-            ✕
-        </button>
+        <input type="text" class="part-brand" placeholder="Бренд" value="${escapeAttr(brand)}">
+        <input type="text" class="part-number" placeholder="Part №" value="${escapeAttr(partNumber)}">
+        <input type="text" class="part-detail-number" placeholder="Номер детали" value="${escapeAttr(partDetailNumber)}">
+        <input type="text" class="part-supplier" placeholder="Поставщик" value="${escapeAttr(supplier)}">
 
+        <div class="quantity-control">
+            <button type="button" onclick="changeQuantity(this,-1)">−</button>
+            <input type="number" class="part-quantity" min="1" step="1" value="${quantity}">
+            <button type="button" onclick="changeQuantity(this,1)">＋</button>
+        </div>
+
+        <input type="number" class="part-price" min="0" step="1" placeholder="Цена за 1 шт." value="${escapeAttr(price)}" oninput="updateLineTotal(this)">
+        <input type="number" class="part-total" min="0" step="1" placeholder="Общая стоимость" value="${escapeAttr(totalPrice !== "" && totalPrice !== null ? totalPrice : (price !== "" && quantity ? Number(price) * Number(quantity) : ""))}" oninput="updateLineTotal(this, true)">
+
+        <select class="part-currency">
+            ${currencyOptions(currency)}
+        </select>
+
+        <button type="button" class="btn-danger small-button" style="width:34px;min-width:34px;padding:6px 8px;" onclick="this.closest('.line-row').remove();updateServiceFormTotal()">✕</button>
     `;
-
 
     container.appendChild(row);
 
     const currencySelect = row.querySelector(".part-currency");
     if (currencySelect) currencySelect.addEventListener("change", updateServiceFormTotal);
+
+    const paidBySelect = row.querySelector(".part-paid-by");
+    if (paidBySelect) {
+        paidBySelect.addEventListener("change", function(){
+            updatePartPaidByStyle(row);
+        });
+    }
+
     const quantityInput = row.querySelector(".part-quantity");
     if (quantityInput) quantityInput.addEventListener("input", () => updateLineTotal(quantityInput));
+
+    updatePartPaidByStyle(row);
     updateServiceFormTotal();
 
     setupAutocomplete(
-
-        row.querySelector(
-            ".part-name"
-        ),
-
-        row.querySelector(
-            ".autocomplete-list"
-        ),
-
+        row.querySelector(".part-name"),
+        row.querySelector(".autocomplete-list"),
         partSuggestions
-
     );
-
 }
 
-
+function updatePartPaidByStyle(row) {
+    if (!row) return;
+    const paidBy = row.querySelector(".part-paid-by")?.value || "";
+    row.style.background = paidBy === "Мной"
+        ? "#ffdede"
+        : paidBy === "Клиентом"
+            ? "#ddf7df"
+            : "";
+}
 /* =====================================================
    ОБЩАЯ СТОИМОСТЬ
 ===================================================== */
@@ -7365,6 +7269,11 @@ async function saveService() {
                     .value
                     .trim();
 
+            const paidBy =
+                row
+                    .querySelector(".part-paid-by")
+                    .value;
+
 
             const quantity =
                 Number(
@@ -7424,6 +7333,9 @@ async function saveService() {
 
                             supplier:
                                 supplier,
+
+                            paid_by:
+                                paidBy || null,
 
                             quantity:
                                 quantity > 0
@@ -7762,7 +7674,9 @@ async function editService(
 
                 :
 
-                "EUR"
+                "EUR",
+
+                part.paid_by || ""
 
             );
 
