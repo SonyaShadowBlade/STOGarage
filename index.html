@@ -6488,7 +6488,7 @@ function addWorkRow(
     row.innerHTML = `
 
         <select class="work-paid-by" style="min-width:125px;">
-            <option value="" disabled hidden ${paidBy ? "" : "selected"}>Кем оплачено</option>
+            <option value="" ${paidBy ? "" : "selected"}>Кем оплачено</option>
             <option value="Мной" ${paidBy === "Мной" ? "selected" : ""}>Мной</option>
             <option value="Клиентом" ${paidBy === "Клиентом" ? "selected" : ""}>Клиентом</option>
         </select>
@@ -7968,7 +7968,10 @@ async function updateExistingService(
                                     currency
                                 )
                                 ? currency
-                                : "BYN"
+                                : "BYN",
+
+                            paid_by:
+                                row.querySelector(".work-paid-by")?.value || null
 
                         })
 
