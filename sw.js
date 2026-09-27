@@ -15,7 +15,7 @@ self.addEventListener("push", event => {
         body: data.body || "Новое сообщение",
         tag: data.tag || "stogarage-message",
         renotify: true,
-        data: { url: data.url || "/" }
+        data: { url: data.url || "./" }
       }
     );
   })());
@@ -25,7 +25,7 @@ self.addEventListener("notificationclick", event => {
   event.notification.close();
   const targetUrl = event.notification.data && event.notification.data.url
     ? new URL(event.notification.data.url, self.location.origin).href
-    : self.location.origin + "/";
+    : new URL("./", self.registration.scope).href;
 
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({
