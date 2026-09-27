@@ -4648,6 +4648,91 @@ async function saveEditedVehicle() {
 
 
 /* =====================================================
+   VIN ПОЛЯ НОВОГО КЛИЕНТА
+===================================================== */
+
+function sanitizeVin(input) {
+    if (!input) return;
+
+    input.value = String(input.value || "")
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "")
+        .slice(0, 17);
+}
+
+function getVehicleVins() {
+    const fields = document.querySelectorAll(
+        "#vehicleVinFields .vehicle-vin-input"
+    );
+
+    return Array.from(fields)
+        .map(input => String(input.value || "").trim())
+        .filter(Boolean);
+}
+
+function setVehicleVins(value) {
+    const container = document.getElementById("vehicleVinFields");
+    if (!container) return;
+
+    const values = Array.isArray(value)
+        ? value
+        : String(value || "")
+            .split(/\\r?\\n/)
+            .map(item => item.trim())
+            .filter(Boolean);
+
+    const initialValues = values.length ? values : [""];
+
+    container.innerHTML = initialValues.map((vin, index) => {
+        const safeVin = escapeHtml(String(vin || ""));
+        const id = index === 0 ? "vehicleVin" : "";
+        return `
+            <div class="vin-row" style="display:flex;gap:8px;margin-bottom:8px;">
+                <input
+                    ${id ? `id="${id}"` : ""}
+                    class="vehicle-vin-input"
+                    type="text"
+                    autocomplete="off"
+                    oninput="sanitizeVin(this)"
+                    placeholder="VIN"
+                    value="${safeVin}"
+                >
+                ${index > 0
+                    ? '<button type="button" class="btn-secondary small-button" onclick="this.closest(\\'.vin-row\\').remove()">✕</button>'
+                    : ""}
+            </div>
+        `;
+    }).join("");
+}
+
+function addVinField() {
+    const container = document.getElementById("vehicleVinFields");
+    if (!container) return;
+
+    const row = document.createElement("div");
+    row.className = "vin-row";
+    row.style.cssText = "display:flex;gap:8px;margin-bottom:8px;";
+
+    const input = document.createElement("input");
+    input.className = "vehicle-vin-input";
+    input.type = "text";
+    input.autocomplete = "off";
+    input.placeholder = "VIN";
+    input.addEventListener("input", () => sanitizeVin(input));
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "btn-secondary small-button";
+    remove.textContent = "✕";
+    remove.onclick = () => row.remove();
+
+    row.appendChild(input);
+    row.appendChild(remove);
+    container.appendChild(row);
+    input.focus();
+}
+
+/* =====================================================
    НОВЫЙ КЛИЕНТ
 ===================================================== */
 
