@@ -2115,7 +2115,7 @@
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.20";
+const APP_VERSION = "0.3.21";
 
 function showVersionCheck(text, success = false) {
     const bg = document.getElementById("versionCheckBg");
@@ -10399,9 +10399,13 @@ setTimeout(() => {
     const mainHidden = !mainContainer || getComputedStyle(mainContainer).display === "none";
     const portalHidden = !portal || !portal.classList.contains("visible");
 
-    if (authHidden && mainHidden && portalHidden && !authSession) {
+    if (authHidden && mainHidden && portalHidden) {
         showAuth(true);
-        setStatus("Сессия не найдена. Выполните вход в СТО.");
+        setStatus(
+            authSession
+                ? "Запуск СТО не завершился. Выполните вход ещё раз."
+                : "Сессия не найдена. Выполните вход в СТО."
+        );
     }
 }, 6000);
 </script>
