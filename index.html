@@ -9517,10 +9517,18 @@ function renderPrivateChatMessages(messages) {
         return;
     }
 
+    // Для определения своих сообщений используем именно auth.uid().
+    // Профиль аренды может не содержать user_id, поэтому раньше
+    // сообщения считались чужими — из-за этого не показывались
+    // галочки и кнопки «Изменить/Удалить».
     const myUserId =
-        sanechkaRentalProfile && sanechkaRentalProfile.user_id
-            ? String(sanechkaRentalProfile.user_id)
-            : "";
+        authSession && authSession.user && authSession.user.id
+            ? String(authSession.user.id)
+            : (
+                sanechkaRentalProfile && sanechkaRentalProfile.user_id
+                    ? String(sanechkaRentalProfile.user_id)
+                    : ""
+            );
 
     el.innerHTML = safeMessages.map(m => {
         const own = myUserId && String(m.sender_user_id) === myUserId;
