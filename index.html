@@ -2109,13 +2109,13 @@
 </div>
 
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 <script>
 /* =====================================================
    SUPABASE
 ===================================================== */
 
-const APP_VERSION = "0.3.21";
+const APP_VERSION = "0.3.22";
 
 function showVersionCheck(text, success = false) {
     const bg = document.getElementById("versionCheckBg");
@@ -10386,6 +10386,14 @@ runStartup().catch(error => {
 setTimeout(() => {
     refreshDeveloperMessagesBadge();
     refreshDeveloperClientMessagesBadge();
+
+    // Supabase JS загружается отложенно и не должен блокировать запуск страницы.
+    // Если CDN уже загрузился — запускаем Realtime отдельно.
+    if (window.supabase && authSession && !realtimeChannel) {
+        startRealtimeSync().catch(error => {
+            console.warn("Не удалось запустить Realtime после загрузки Supabase JS:", error);
+        });
+    }
 }, 1500);
 
 // Аварийная защита от пустого серого экрана:
