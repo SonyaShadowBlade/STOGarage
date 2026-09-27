@@ -1657,6 +1657,11 @@
                 </div>
 
                 <div class="field">
+                    <label>Мощность</label>
+                    <input id="vehiclePower" type="text" inputmode="numeric" oninput="formatEnginePower(this)">
+                </div>
+
+                <div class="field">
                     <label>Маркировка двигателя</label>
                     <input id="vehicleEngineMarking">
                 </div>
@@ -1753,6 +1758,11 @@
             </div>
 
             <div class="field">
+                <label>Мощность</label>
+                <input id="addVehiclePower" type="text" inputmode="numeric" oninput="formatEnginePower(this)">
+            </div>
+
+            <div class="field">
                 <label>Маркировка двигателя</label>
                 <input id="addVehicleEngineMarking">
             </div>
@@ -1833,6 +1843,11 @@
             <div class="field">
                 <label>Двигатель</label>
                 <input id="editVehicleEngine">
+            </div>
+
+            <div class="field">
+                <label>Мощность</label>
+                <input id="editVehiclePower" type="text" inputmode="numeric" oninput="formatEnginePower(this)">
             </div>
 
             <div class="field">
@@ -4599,6 +4614,7 @@ async function saveAdditionalVehicle() {
                     year: year,
                     engine: engine,
                     engine_marking: document.getElementById("addVehicleEngineMarking").value.trim(),
+                    power: document.getElementById("addVehiclePower").value.replace(/[^0-9]/g, "").trim(),
                     current_mileage: mileage
                 })
             }
@@ -4635,6 +4651,7 @@ function openEditVehicleModal(vehicleId) {
     document.getElementById("editVehicleYear").value = vehicle.year || "";
     document.getElementById("editVehicleEngine").value = vehicle.engine || "";
     document.getElementById("editVehicleEngineMarking").value = vehicle.engine_marking || "";
+    document.getElementById("editVehiclePower").value = vehicle.power ? String(vehicle.power) + " л.с." : "";
     document.getElementById("editVehicleMileage").value = vehicle.current_mileage ?? "";
 
     document.getElementById("editVehicleModalBg").style.display = "block";
@@ -4657,6 +4674,7 @@ async function saveEditedVehicle() {
             year: parseInteger(document.getElementById("editVehicleYear").value),
             engine: document.getElementById("editVehicleEngine").value.trim(),
             engine_marking: document.getElementById("editVehicleEngineMarking").value.trim(),
+            power: document.getElementById("editVehiclePower").value.replace(/[^0-9]/g, "").trim(),
             current_mileage: parseInteger(document.getElementById("editVehicleMileage").value)
         };
 
@@ -4684,6 +4702,11 @@ async function saveEditedVehicle() {
 /* =====================================================
    VIN ПОЛЯ НОВОГО КЛИЕНТА
 ===================================================== */
+
+function formatEnginePower(input) {
+    const digits = input.value.replace(/[^0-9]/g, "");
+    input.value = digits ? digits + " л.с." : "";
+}
 
 function sanitizeVin(input) {
     if (!input) return;
@@ -4819,6 +4842,7 @@ function openEditClientModal(id) {
                 vehicle.year ? "Год: " + escapeHtml(String(vehicle.year)) : "",
                 vehicle.engine ? "Двигатель: " + escapeHtml(vehicle.engine) : "",
                 vehicle.engine_marking ? "Маркировка двигателя: " + escapeHtml(vehicle.engine_marking) : "",
+                vehicle.power ? "Мощность: " + escapeHtml(String(vehicle.power)) + " л.с." : "",
                 vehicle.current_mileage != null ? "Пробег: " + escapeHtml(String(vehicle.current_mileage)) : ""
             ].filter(Boolean);
 
@@ -4924,6 +4948,7 @@ async function saveClient() {
                         model: model,
                         year: parseInteger(document.getElementById("vehicleYear").value),
                         engine: document.getElementById("vehicleEngine").value.trim(),
+                        power: document.getElementById("vehiclePower").value.replace(/[^0-9]/g, "").trim(),
                         engine_marking: document.getElementById("vehicleEngineMarking").value.trim(),
                         current_mileage: parseInteger(document.getElementById("vehicleMileage").value)
                     })
