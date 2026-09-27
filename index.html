@@ -9538,13 +9538,13 @@ function renderPrivateChatMessages(messages) {
         }
 
         const actions = own && m.id
-            ? "<div class="developer-message-actions">" +
-              "<button class="developer-message-edit" type="button" onclick="event.stopPropagation(); editPrivateChatMessage('" +
+            ? "<div class=\"developer-message-actions\">" +
+              "<button class=\"developer-message-edit\" type=\"button\" onclick=\"event.stopPropagation(); editPrivateChatMessage('" +
               escapeAttr(String(m.id)) +
-              "')">✏️ Изменить</button>" +
-              "<button class="developer-message-delete" type="button" onclick="event.stopPropagation(); deletePrivateChatMessage('" +
+              "')\">✏️ Изменить</button>" +
+              "<button class=\"developer-message-delete\" type=\"button\" onclick=\"event.stopPropagation(); deletePrivateChatMessage('" +
               escapeAttr(String(m.id)) +
-              "')">🗑️ Удалить</button>" +
+              "')\">🗑️ Удалить</button>" +
               "</div>"
             : "";
 
