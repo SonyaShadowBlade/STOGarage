@@ -6645,7 +6645,7 @@ function addPartRow(
 
     row.innerHTML = `
         <select class="part-paid-by" style="min-width:125px;">
-            <option value="" disabled hidden ${paidBy ? "" : "selected"}>Кем оплачено</option>
+            <option value="" ${paidBy ? "" : "selected"}>Кем оплачено</option>
             <option value="Мной" ${paidBy === "Мной" ? "selected" : ""}>Мной</option>
             <option value="Клиентом" ${paidBy === "Клиентом" ? "selected" : ""}>Клиентом</option>
         </select>
