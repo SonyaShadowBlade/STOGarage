@@ -13,8 +13,6 @@ self.addEventListener("push", event => {
       data.title || "СТОGarage",
       {
         body: data.body || "Новое сообщение",
-        icon: data.icon || "/icon-192.png",
-        badge: data.badge || "/icon-192.png",
         tag: data.tag || "stogarage-message",
         renotify: true,
         data: { url: data.url || "/" }
