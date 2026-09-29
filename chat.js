@@ -119,12 +119,13 @@
       const data = await r.json().catch(()=>({}));
       if (!r.ok) throw new Error(data.error || "Нет доступа");
       role = data.role;
-      const b = document.getElementById("mamaStoChatButton");
-      if (b) b.style.display = "block";
+      showChatButton();
       return data.messages || [];
-    } catch (_) {
-      const b = document.getElementById("mamaStoChatButton");
-      if (b) b.style.display = "none";
+    } catch (err) {
+      // Не прячем кнопку из-за временной ошибки загрузки чата.
+      // Реальный доступ всё равно проверяется Edge Function при открытии/отправке.
+      showChatButton();
+      console.warn("Не удалось обновить доступ к чату:", err);
       return null;
     }
   }
