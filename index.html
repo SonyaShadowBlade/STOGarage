@@ -1304,6 +1304,7 @@
     <span>🚗 СТО — сервисная база</span>
     <span id="userGreeting" class="user-greeting"></span>
     <button id="developerMessagesButton" class="developer-messages-button" onclick="openDeveloperMessages()" style="display:none;">💬 Сообщения <span id="developerMessagesBadge" class="developer-messages-badge" style="display:none;">0</span></button>
+    <button id="mamaStoChatButton" class="developer-messages-button" onclick="window.mamaStoChat?.open()" style="display:none;">💬 Чат с Mama</button>
     <button id="privateChatButton" class="private-chat-button" onclick="openPrivateChat()" style="display:none;">💬 <span id="privateChatButtonLabel">Чат</span> <span id="privateChatBadge" class="private-chat-badge" style="display:none;">0</span></button>
     <button id="pushNotificationsButton" class="private-chat-button" onclick="togglePushNotifications()" style="display:none;">🔔 <span id="pushNotificationsLabel">Уведомления</span></button>
     <button id="logoutButton" class="btn-secondary auth-logout" onclick="logout()" style="display:none;">🚪 Выйти</button>
@@ -11293,6 +11294,6 @@ setTimeout(() => {
     }
 }, 6000);
 </script>
-<script src="./chat.js"></script>
+<script src="./chat.js?v=20260929-3"></script>
 </body>
 </html>
