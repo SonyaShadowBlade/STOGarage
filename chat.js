@@ -175,6 +175,12 @@
 
   window.mamaStoChat = {open:openChat, close:closeChat, refresh:loadMessages};
   setInterval(() => { if (!document.getElementById("mamaStoChatButton")) addButton(); }, 1000);
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, {once:true});
-  else init();
+  function bootWhenReady() {
+    if (window.supabase) {
+      init();
+      return;
+    }
+    setTimeout(bootWhenReady, 150);
+  }
+  bootWhenReady();
 })();
