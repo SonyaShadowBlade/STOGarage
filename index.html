@@ -3817,6 +3817,16 @@ function isSanechkaAccount() {
 
 function applyUserInterfaceMode() {
     const sanechka = isSanechkaAccount();
+
+    const mamaStoChatButton = document.getElementById("mamaStoChatButton");
+    if (mamaStoChatButton) {
+        if (sanechka) {
+            mamaStoChatButton.style.setProperty("display", "none", "important");
+        } else {
+            mamaStoChatButton.style.removeProperty("display");
+        }
+    }
+
     const mainContainer = document.querySelector("body > .container");
     const portal = document.getElementById("sanechkaPortal");
     const headerTitle = document.querySelector("header > span:first-child");
