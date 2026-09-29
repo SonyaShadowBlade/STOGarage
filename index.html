@@ -3416,6 +3416,11 @@ function getAuthHeaders() {
 }
 
 async function logout() {
+    // Сначала убираем push-привязку, пока текущий access token ещё действителен.
+    // Саму браузерную PushSubscription не удаляем — при следующем входе
+    // она будет привязана к новому текущему аккаунту.
+    await removeCurrentPushSubscription();
+
     try {
         if (authSession && authSession.access_token) {
             await authRequest("logout", {
@@ -3427,7 +3432,6 @@ async function logout() {
         console.warn("Выход из Supabase:", error);
     }
 
-    await removeCurrentPushSubscription();
     clearSession();
     clients = [];
     vehicles = [];
