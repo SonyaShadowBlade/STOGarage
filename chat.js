@@ -50,13 +50,13 @@
     if (document.getElementById("mamaStoChatButton")) return;
     let host = null;
     if (isMama) host = document.querySelector(".actions");
-    else host = document.querySelector(".sanechka-main-buttons");
+    else host = document.querySelector(".sanechka-main-buttons") || document.querySelector("header");
     if (!host) return;
     const b = document.createElement("button");
     b.id = "mamaStoChatButton";
-    b.className = isMama ? "btn secondary" : "sanechka-main-button";
+    b.className = isMama ? "btn secondary" : (document.querySelector(".sanechka-main-buttons") ? "sanechka-main-button" : "developer-messages-button");
     b.textContent = "💬 " + CHAT_TITLE;
-    if (!isMama) b.style.cssText = "min-height:80px;font-size:22px;font-weight:900;background:#374151;color:#fff;";
+    if (!isMama && document.querySelector(".sanechka-main-buttons")) b.style.cssText = "min-height:80px;font-size:22px;font-weight:900;background:#374151;color:#fff;";
     b.type = "button";
     b.onclick = openChat;
     host.appendChild(b);
