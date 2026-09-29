@@ -112,7 +112,7 @@
     return data.session.access_token;
   }
 
-  async function refreshAccess() {
+  function showChatButton() {\n    const b = document.getElementById("mamaStoChatButton");\n    if (b) b.style.display = "block";\n  }\n\n  async function refreshAccess() {
     try {
       const token = await getToken();
       const r = await fetch(FUNCTION_URL, {headers:{Authorization:"Bearer "+token}});
