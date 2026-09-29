@@ -110,10 +110,44 @@
 
   async function getToken() {
     if (!client) {
-      client = window.supabase.createClient(isMama ? MAMA_URL : STO_URL, isMama ? MAMA_KEY : STO_KEY);
+      if (isMama) {
+        client = window.supabase.createClient(MAMA_URL, MAMA_KEY);
+      } else {
+        // STO хранит свою авторизацию в sto_supabase_session,
+        // поэтому чат должен читать ту же сессию, а не отдельное хранилище Supabase.
+        const storage = {
+          getItem: (key) => {
+            try {
+              return localStorage.getItem(key) || sessionStorage.getItem(key);
+            } catch (_) { return null; }
+          },
+          setItem: (key, value) => {
+            try {
+              localStorage.setItem(key, value);
+            } catch (_) {}
+          },
+          removeItem: (key) => {
+            try {
+              localStorage.removeItem(key);
+              sessionStorage.removeItem(key);
+            } catch (_) {}
+          }
+        };
+        client = window.supabase.createClient(STO_URL, STO_KEY, {
+          auth: { storage, persistSession: true, autoRefreshToken: true }
+        });
+      }
     }
     const {data,error} = await client.auth.getSession();
-    if (error || !data.session?.access_token) throw new Error("Сессия не найдена. Войдите в приложение.");
+    if (error || !data.session?.access_token) {
+      // Последний fallback: берём токен из сессии самого приложения STO.
+      try {
+        const raw = localStorage.getItem("sto_supabase_session") || sessionStorage.getItem("sto_supabase_session");
+        const session = raw ? JSON.parse(raw) : null;
+        if (session?.access_token) return session.access_token;
+      } catch (_) {}
+      throw new Error("Сессия не найдена. Войдите в приложение.");
+    }
     return data.session.access_token;
   }
 
