@@ -47,11 +47,15 @@
   }
 
   function addButton() {
-    if (document.getElementById("mamaStoChatButton")) return;
+    const existing = document.getElementById("mamaStoChatButton");
+    if (existing) {
+      existing.onclick = openChat;
+      return existing;
+    }
     let host = null;
     if (isMama) host = document.querySelector(".actions");
     else host = document.querySelector(".sanechka-main-buttons") || document.querySelector("header");
-    if (!host) return;
+    if (!host) return null;
     const b = document.createElement("button");
     b.id = "mamaStoChatButton";
     b.className = isMama ? "btn secondary" : (document.querySelector(".sanechka-main-buttons") ? "sanechka-main-button" : "developer-messages-button");
@@ -60,6 +64,7 @@
     b.type = "button";
     b.onclick = openChat;
     host.appendChild(b);
+    return b;
   }
 
   function addModal() {
