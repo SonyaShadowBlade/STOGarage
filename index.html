@@ -2611,6 +2611,8 @@ function togglePasswordVisibility(inputId, button) {
 
 let pushServiceWorkerRegistration = null;
 let pushButtonUpdateSeq = 0;
+let pushAutoRestoreInProgress = false;
+const PUSH_PREFERENCE_KEY = "sto_push_notifications_enabled";
 
 function urlBase64ToUint8Array(base64String) {
     const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -2705,6 +2707,7 @@ async function updatePushNotificationsButton() {
         if (subscription) {
             try {
                 await syncCurrentPushSubscription(subscription);
+                localStorage.setItem(PUSH_PREFERENCE_KEY, "1");
             } catch (syncError) {
                 console.warn("Не удалось синхронизировать push-подписку:", syncError);
             }
@@ -2722,9 +2725,41 @@ async function updatePushNotificationsButton() {
         if (Notification.permission === "denied") {
             label.textContent = "Уведомления запрещены";
             button.classList.add("denied");
-        } else {
-            button.classList.remove("denied");
-            label.textContent = "Включить уведомления";
+            return;
+        }
+
+        button.classList.remove("denied");
+        label.textContent = "Включить уведомления";
+
+        // Пользователь ранее сам включал push. Если браузер потерял
+        // подписку, пробуем восстановить её без повторного клика.
+        const wantsPush = localStorage.getItem(PUSH_PREFERENCE_KEY) === "1";
+
+        if (
+            wantsPush &&
+            Notification.permission === "granted" &&
+            !pushAutoRestoreInProgress
+        ) {
+            pushAutoRestoreInProgress = true;
+
+            try {
+                const restored = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(PUSH_VAPID_PUBLIC_KEY)
+                });
+
+                await syncCurrentPushSubscription(restored);
+
+                if (seq !== pushButtonUpdateSeq) return;
+
+                label.textContent = "Уведомления включены";
+                button.classList.remove("denied");
+                button.classList.add("enabled");
+            } catch (restoreError) {
+                console.warn("Не удалось автоматически восстановить push-подписку:", restoreError);
+            } finally {
+                pushAutoRestoreInProgress = false;
+            }
         }
     } catch (error) {
         if (seq !== pushButtonUpdateSeq) return;
@@ -2771,6 +2806,7 @@ async function togglePushNotifications() {
             );
 
             await subscription.unsubscribe();
+            localStorage.removeItem(PUSH_PREFERENCE_KEY);
             pushButtonUpdateSeq++;
             label.textContent = "Включить уведомления";
             button.classList.remove("enabled", "denied");
@@ -2800,6 +2836,7 @@ async function togglePushNotifications() {
 
         await syncCurrentPushSubscription(subscription);
 
+        localStorage.setItem(PUSH_PREFERENCE_KEY, "1");
         pushButtonUpdateSeq++;
         label.textContent = "Уведомления включены";
         button.classList.remove("denied");
