@@ -2610,6 +2610,7 @@ function togglePasswordVisibility(inputId, button) {
 ===================================================== */
 
 let pushServiceWorkerRegistration = null;
+let pushButtonUpdateSeq = 0;
 
 function urlBase64ToUint8Array(base64String) {
     const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -2641,49 +2642,102 @@ async function getPushServiceWorker() {
     }
 }
 
+async function syncCurrentPushSubscription(subscription) {
+    if (!subscription || !authSession?.user?.id) return false;
+
+    const json = subscription.toJSON();
+
+    if (!json.endpoint || !json.keys || !json.keys.p256dh || !json.keys.auth) {
+        throw new Error("Браузер не вернул полные данные push-подписки.");
+    }
+
+    await api("push_subscriptions?on_conflict=endpoint", {
+        method: "POST",
+        headers: {
+            "Prefer": "resolution=merge-duplicates,return=minimal"
+        },
+        body: JSON.stringify({
+            user_id: authSession.user.id,
+            endpoint: json.endpoint,
+            p256dh: json.keys.p256dh,
+            auth: json.keys.auth
+        })
+    });
+
+    return true;
+}
+
 async function updatePushNotificationsButton() {
     const button = document.getElementById("pushNotificationsButton");
     const label = document.getElementById("pushNotificationsLabel");
 
     if (!button || !label) return;
 
+    const seq = ++pushButtonUpdateSeq;
     const loggedIn = !!(authSession && authSession.access_token);
-    button.style.display = loggedIn ? "inline-flex" : "none";
-    button.classList.remove("enabled", "denied");
 
     if (!loggedIn) {
+        button.style.display = "none";
+        button.classList.remove("enabled", "denied");
+        button.disabled = false;
         label.textContent = "Уведомления";
         return;
     }
 
+    button.style.display = "inline-flex";
+    button.disabled = false;
+
     if (!("Notification" in window) || !("PushManager" in window)) {
-        label.textContent = "Нет push";
+        button.classList.remove("enabled");
+        button.classList.add("denied");
         button.disabled = true;
+        label.textContent = "Нет push";
         return;
     }
-
-    button.disabled = false;
 
     try {
         const registration = await getPushServiceWorker();
         const subscription =
             registration && await registration.pushManager.getSubscription();
 
+        if (seq !== pushButtonUpdateSeq) return;
+
         if (subscription) {
+            try {
+                await syncCurrentPushSubscription(subscription);
+            } catch (syncError) {
+                console.warn("Не удалось синхронизировать push-подписку:", syncError);
+            }
+
+            if (seq !== pushButtonUpdateSeq) return;
+
             label.textContent = "Уведомления включены";
+            button.classList.remove("denied");
             button.classList.add("enabled");
             return;
         }
+
+        button.classList.remove("enabled");
 
         if (Notification.permission === "denied") {
             label.textContent = "Уведомления запрещены";
             button.classList.add("denied");
         } else {
+            button.classList.remove("denied");
             label.textContent = "Включить уведомления";
         }
     } catch (error) {
+        if (seq !== pushButtonUpdateSeq) return;
+
+        // Ошибка проверки сети/Service Worker не означает, что пользователь
+        // отключил уведомления. Не сбрасываем зелёное состояние из-за временной ошибки.
         console.warn("Не удалось проверить push-подписку:", error);
-        label.textContent = "Включить уведомления";
+
+        if (button.classList.contains("enabled")) {
+            label.textContent = "Уведомления включены";
+        } else {
+            label.textContent = "Не удалось проверить уведомления";
+        }
     }
 }
 
@@ -2691,7 +2745,7 @@ async function togglePushNotifications() {
     const button = document.getElementById("pushNotificationsButton");
     const label = document.getElementById("pushNotificationsLabel");
 
-    if (!authSession || !authSession.access_token) return;
+    if (!button || !authSession || !authSession.access_token) return;
 
     if (!("Notification" in window) || !("PushManager" in window)) {
         alert("Этот браузер не поддерживает push-уведомления.");
@@ -2717,8 +2771,9 @@ async function togglePushNotifications() {
             );
 
             await subscription.unsubscribe();
+            pushButtonUpdateSeq++;
             label.textContent = "Включить уведомления";
-            button.classList.remove("enabled");
+            button.classList.remove("enabled", "denied");
             return;
         }
 
@@ -2743,26 +2798,11 @@ async function togglePushNotifications() {
             applicationServerKey: urlBase64ToUint8Array(PUSH_VAPID_PUBLIC_KEY)
         });
 
-        const json = subscription.toJSON();
+        await syncCurrentPushSubscription(subscription);
 
-        if (!json.endpoint || !json.keys || !json.keys.p256dh || !json.keys.auth) {
-            throw new Error("Браузер не вернул данные push-подписки.");
-        }
-
-        await api("push_subscriptions", {
-            method: "POST",
-            headers: {
-                "Prefer": "return=minimal"
-            },
-            body: JSON.stringify({
-                user_id: authSession.user.id,
-                endpoint: json.endpoint,
-                p256dh: json.keys.p256dh,
-                auth: json.keys.auth
-            })
-        });
-
+        pushButtonUpdateSeq++;
         label.textContent = "Уведомления включены";
+        button.classList.remove("denied");
         button.classList.add("enabled");
     } catch (error) {
         console.error("Ошибка включения push-уведомлений:", error);
@@ -2791,18 +2831,34 @@ async function removeCurrentPushSubscription() {
 
         if (!subscription) return;
 
+        // При выходе удаляем серверную привязку, но НЕ отписываем
+        // сам браузер. При следующем входе подписка будет автоматически
+        // привязана к текущему аккаунту.
         await api(
             "push_subscriptions?endpoint=eq." +
             encodeURIComponent(subscription.endpoint),
             { method: "DELETE" }
         );
-
-        await subscription.unsubscribe();
     } catch (error) {
-        console.warn("Не удалось удалить push-подписку:", error);
+        console.warn("Не удалось удалить серверную push-привязку:", error);
     }
 }
 
+function schedulePushNotificationsButtonRefresh() {
+    clearTimeout(window.stoPushButtonRefreshTimer);
+    window.stoPushButtonRefreshTimer = setTimeout(() => {
+        updatePushNotificationsButton();
+    }, 250);
+}
+
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+        schedulePushNotificationsButtonRefresh();
+    }
+});
+
+window.addEventListener("focus", schedulePushNotificationsButtonRefresh);
+window.addEventListener("pageshow", schedulePushNotificationsButtonRefresh);
 
 function clearSession() {
     authSession = null;
