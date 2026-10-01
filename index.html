@@ -3254,6 +3254,9 @@ async function login(event) {
         await loadData();
         applyUserInterfaceMode();
         await startRealtimeSync();
+        // После смены аккаунта чат должен сразу заново проверить доступ
+        // и восстановить кнопку без принудительного обновления страницы.
+        window.mamaStoChat?.refresh?.();
 
         const userRole = String(
             sanechkaRentalProfile && sanechkaRentalProfile.role || ""
@@ -11455,6 +11458,6 @@ setTimeout(() => {
     }
 }, 6000);
 </script>
-<script src="./chat.js?v=20261001-7"></script>
+<script src="./chat.js?v=20261001-8"></script>
 </body>
 </html>
