@@ -14,6 +14,6 @@ async function edit(id){const e=document.querySelector('.mama-sto-msg[data-id="'
 async function del(id){if(!confirm("Удалить это сообщение?"))return;try{await req("delete",{id});await load()}catch(x){status(x.message)}}
 async function openChat(){modal();document.getElementById("mamaStoChatModal").classList.add("open");opened=true;await load();try{await req("read");unread(0);await load()}catch(e){console.warn("read:",e)}document.getElementById("mamaStoChatInput")?.focus()}
 function closeChat(){document.getElementById("mamaStoChatModal")?.classList.remove("open");opened=false}
-async function init(){if(!window.supabase)return;css();modal();const allowed=await access();if(!allowed)return;clearInterval(timer);timer=setInterval(load,1800);document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")load()})}
+async function init(){if(!window.supabase)return;css();modal();clearInterval(timer);await access();timer=setInterval(load,1800);document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")load()})}
 window.mamaStoChat={open:openChat,close:closeChat,refresh:load};(function boot(){if(window.supabase)init();else setTimeout(boot,150)})();
 })();
