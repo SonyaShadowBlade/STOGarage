@@ -15,5 +15,5 @@ async function del(id){if(!confirm("Удалить это сообщение?"))
 async function openChat(){modal();document.getElementById("mamaStoChatModal").classList.add("open");opened=true;await load();try{await req("read");unread(0);await load()}catch(e){console.warn("read:",e)}document.getElementById("mamaStoChatInput")?.focus()}
 function closeChat(){document.getElementById("mamaStoChatModal")?.classList.remove("open");opened=false}
 async function init(){if(!window.supabase)return;css();addButton();modal();await load();clearInterval(timer);timer=setInterval(load,1800);document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")load()})}
-window.mamaStoChat={open:openChat,close:closeChat,refresh:load};setInterval(()=>{if(!document.getElementById("mamaStoChatButton"))addButton()},1000);(function boot(){if(window.supabase)init();else setTimeout(boot,150)})();
+window.mamaStoChat={open:openChat,close:closeChat,refresh:load};(function boot(){if(window.supabase)init();else setTimeout(boot,150)})();
 })();
